@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DashboardHome from './DashboardHome';
 import Transactions from './Transactions';
@@ -7,18 +7,14 @@ import UserProfile from './UserProfile';
 import Settings from './Settings';
 import Analytics from './Analytics';
 import Support from './Support';
+import RedirectToDashboard from './RedirectToDashboard';
 
 function App() {
   const [user, setUser] = useState(null);
 
-  // Fetch user data when the component mounts
+  // Fetch user data ON EVERY MOUNT/Rerender (depending on your app logic)
   useEffect(() => {
-    axios.get('/api/user', { 
-      withCredentials: true,
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    })
+    axios.get('/api/user', { withCredentials: true })
       .then(res => setUser(res.data))
       .catch(err => {
         console.error('Error fetching user:', err);
@@ -26,12 +22,21 @@ function App() {
       });
   }, []);
 
-  
+  // Render login view if there's no user info.
   if (!user) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h2>You are not logged in</h2>
-        <a href="/auth/discord" style={{ padding: '1rem', background: '#7289DA', color: 'white', borderRadius: '5px', textDecoration: 'none' }}>
+        <a
+          href="/auth/discord"
+          style={{
+            padding: '1rem',
+            background: '#7289DA',
+            color: 'white',
+            borderRadius: '5px',
+            textDecoration: 'none'
+          }}
+        >
           Login with Discord
         </a>
       </div>
@@ -43,23 +48,27 @@ function App() {
       <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
         <h1>Admin Dashboard</h1>
         <nav>
-          <Link to="/">Home</Link> |{' '}
-          <Link to="/profile">Profile</Link>
-          | <Link to="/transactions">Transactions</Link> |{' '}
+          <Link to="/dashboard">Home</Link> |{' '}
+          <Link to="/profile">Profile</Link> |{' '}
+          <Link to="/transactions">Transactions</Link> |{' '}
           <Link to="/settings">Bot Settings</Link> |{' '}
-          <Link to="/analytics">Analytics</Link>
-          | <Link to="/support">Support</Link>
-          | <a href="/auth/logout">Logout</a>
+          <Link to="/analytics">Analytics</Link> |{' '}
+          <Link to="/support">Support</Link> |{' '}
+          <a href="/auth/logout">Logout</a>
         </nav>
       </header>
       <main style={{ padding: '1rem' }}>
         <Routes>
-          <Route path="/" element={<DashboardHome user={user} />} />
+          {/* When the user navigates to /dashboard, render the dashboard home */}
+          <Route path="/dashboard" element={<DashboardHome user={user} />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/redirect" element={<RedirectToDashboard />} />
+          {/* Catch-all route – if no authenticated path matches, default to dashboard */}
+          <Route path="*" element={<DashboardHome user={user} />} />
         </Routes>
       </main>
     </Router>

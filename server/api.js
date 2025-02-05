@@ -45,4 +45,8 @@ router.get('/analytics', ensureAuth, (req, res) => {
   });
 });
 
+router.get('/redirect', (req, res) => {
+  res.redirect('/dashboard');
+});
+
 module.exports = router;
