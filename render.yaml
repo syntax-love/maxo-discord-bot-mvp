@@ -3,9 +3,9 @@ services:
     name: discord-bot-mvp
     runtime: node
     buildCommand: |
-      cd src/dashboard && npm install && npm run build
-      ls -la dist # Verify Vite output
-      cd ../.. && npm install
+      cd dashboard && npm install && npm run build
+      ls -la dist # Verify output
+      cd .. && npm install
     startCommand: node server/app.js
     envVars:
       - key: NODE_ENV

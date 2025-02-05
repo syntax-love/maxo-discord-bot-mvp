@@ -43,12 +43,19 @@ app.use('/api', require('./api'));
 //     └── app.js
 //
 // Using process.cwd() allows us to reliably locate the folder even if __dirname is not as expected.
-const buildPath = path.join(process.cwd(), 'src', 'dashboard', 'dist');
-console.log('Final path:', buildPath);
+const buildPath = path.join(process.cwd(), 'dashboard', 'dist');
+console.log('Final verified path:', buildPath);
+
+// Add this before static file serving
+console.log('Current directory structure:');
+fs.readdir(process.cwd(), (err, files) => {
+  if (err) console.error(err);
+  else console.log('Root contents:', files);
+});
 
 // Verify build directory exists
 if (!fs.existsSync(buildPath)) {
-  console.error('CRITICAL: Missing dist directory at', buildPath);
+  console.error('FATAL: Missing dist at', buildPath);
   process.exit(1);
 }
 
