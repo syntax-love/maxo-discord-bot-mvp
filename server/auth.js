@@ -6,8 +6,8 @@ const router = express.Router();
 // Start the Discord OAuth flow
 router.get('/discord', passport.authenticate('discord'));
 
-// OAuth callback URl - on success, redirect to the dashboard; on failure, redirect to /login
-router.get('/discord/callback', passport.authenticate('discord', { failureRedirect: '/login' }), (req, res) => {
+// OAuth callback URl - on success, redirect to the dashboard; on failure, redirect to /auth/discord
+router.get('/discord/callback', passport.authenticate('discord', { failureRedirect: '/auth/discord' }), (req, res) => {
     res.redirect('/');
 });
 
