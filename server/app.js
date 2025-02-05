@@ -23,9 +23,11 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { 
+    cookie: {
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 86400000 // 24 hours
+      maxAge: 86400000,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      httpOnly: true
     }
   })
 );

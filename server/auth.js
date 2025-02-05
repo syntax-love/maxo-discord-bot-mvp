@@ -7,7 +7,9 @@ const router = express.Router();
 router.get('/discord', passport.authenticate('discord'));
 
 // OAuth callback URl - on success, redirect to the dashboard; on failure, redirect to /auth/discord
-router.get('/discord/callback', passport.authenticate('discord', { failureRedirect: '/auth/discord' }), (req, res) => {
+router.get('/discord/callback', passport.authenticate('discord', { failureRedirect: '/login' }), (req, res) => {
+    console.log('CALLBACK REACHED - User:', req.user);
+    console.log('Session ID:', req.sessionID);
     res.redirect('/');
 });
 

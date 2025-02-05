@@ -13,7 +13,12 @@ function App() {
 
   // Fetch user data when the component mounts
   useEffect(() => {
-    axios.get('/api/user', { withCredentials: true })
+    axios.get('/api/user', { 
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
       .then(res => setUser(res.data))
       .catch(err => {
         console.error('Error fetching user:', err);
