@@ -3,8 +3,7 @@ services:
     name: discord-bot-mvp
     runtime: node
     buildCommand: |
-      cd dashboard && npm install
-      npm run build
+      cd dashboard && npm install && npm run build && ls -la build
       cd ..
       npm install
     startCommand: node server/app.js
