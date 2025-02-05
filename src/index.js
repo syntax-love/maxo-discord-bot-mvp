@@ -273,3 +273,12 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
 
 // Log into Discord using your bot token.
 client.login(DISCORD_BOT_TOKEN);
+
+const express = require('express');
+const app = express();
+
+// Use Render's PORT or default to 3000 locally
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

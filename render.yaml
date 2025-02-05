@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: discord-bot-mvp
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GUILD_ID
+        value: 1335686213931237437
+      - key: PORT
+        value: 3000
+    plan: free
