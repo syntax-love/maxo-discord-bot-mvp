@@ -1,0 +1,20 @@
+{
+  "name": "discord-payment-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "syntax.love <dev@syntax.love>",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@nowpaymentsio/nowpayments-api-js": "^1.0.5",
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  },
+  "description": ""
+}
