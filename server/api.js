@@ -4,6 +4,7 @@ const router = express.Router();
 
 // Existing route that returns basic user info (if present)
 router.get('/user', ensureAuth, (req, res) => {
+  console.log('API /user accessed. Session user:', req.user);
   res.json(req.user);
 });
 
@@ -47,6 +48,14 @@ router.get('/analytics', ensureAuth, (req, res) => {
 
 router.get('/redirect', (req, res) => {
   res.redirect('/dashboard');
+});
+
+// Debug endpoint to inspect session
+router.get('/session-test', (req, res) => {
+  res.json({
+    user: req.user || null,
+    session: req.session
+  });
 });
 
 module.exports = router;

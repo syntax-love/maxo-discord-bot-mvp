@@ -14,9 +14,16 @@ function App() {
 
   // Fetch user data ON EVERY MOUNT/Rerender (depending on your app logic)
   useEffect(() => {
-    axios.get('/api/user', { withCredentials: true })
-      .then(res => setUser(res.data))
-      .catch(err => {
+    axios
+      .get('/api/user', {
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then((res) => {
+        console.log('Fetched user:', res.data);
+        setUser(res.data);
+      })
+      .catch((err) => {
         console.error('Error fetching user:', err);
         setUser(null);
       });

@@ -20,7 +20,7 @@ app.use(cors({ origin: true, credentials: true }));
 // Use session middleware
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'defaultsecret',
     resave: false,
     saveUninitialized: false,
     cookie: {
