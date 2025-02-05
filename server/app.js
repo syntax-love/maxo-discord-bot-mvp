@@ -5,8 +5,7 @@ const path = require('path');
 require('dotenv').config();
 const fs = require('fs');
 const { createClient } = require('redis');
-const connectRedis = require('connect-redis');
-const RedisStore = connectRedis(session);
+const { RedisStore } = require('connect-redis');
 const helmet = require('helmet');
 const logger = require('./logger');
 
