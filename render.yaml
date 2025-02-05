@@ -2,8 +2,12 @@ services:
   - type: web
     name: discord-bot-mvp
     runtime: node
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: |
+      cd dashboard && npm install
+      npm run build
+      cd ..
+      npm install
+    startCommand: node server/app.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,3 +16,4 @@ services:
       - key: PORT
         value: 3000
     plan: free
+    staticPublishPath: "dashboard/build"

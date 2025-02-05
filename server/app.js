@@ -3,6 +3,7 @@ const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const fs = require('fs');
 
 // Initialize passport configuration
 require('./passportConfig');
@@ -19,7 +20,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // For local, ensure secure is false
+    cookie: { secure: false } // Set to false for HTTP (local) – enable true on HTTPS/production with proper setup
 }));
 
 // Initialize passport middleware
@@ -32,12 +33,31 @@ app.use('/auth', require('./auth'));
 // Use API routes
 app.use('/api', require('./api'));
 
+// Determine the absolute path to the dashboard build folder.
+// This assumes your structure is as follows:
+//
+// project/
+// ├── dashboard/
+// │   └── build/
+// └── server/
+//     └── app.js
+//
+// Using process.cwd() allows us to reliably locate the folder even if __dirname is not as expected.
+const buildPath = path.join(process.cwd(), 'dashboard', 'build');
+console.log('Build path:', buildPath); // Add this for debugging
+
+// Verify build directory exists
+if (!fs.existsSync(buildPath)) {
+  console.error('FATAL: Build directory missing!');
+  process.exit(1);
+}
+
 // Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../dashboard/build')));
+app.use(express.static(buildPath));
 
 // Handle client-side routing, return all requests to React app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/build', 'index.html'));
+  res.sendFile(path.join(buildPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;
