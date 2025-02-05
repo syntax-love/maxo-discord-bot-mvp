@@ -32,12 +32,13 @@ app.use('/auth', require('./auth'));
 // Use API routes
 app.use('/api', require('./api'));
 
-// Serve static files from the built React dashboard
+// Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dashboard/build')));
 
+// Handle client-side routing, return all requests to React app
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dashboard/build', 'index.html'));
-})
+  res.sendFile(path.join(__dirname, '../dashboard/build', 'index.html'));
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
