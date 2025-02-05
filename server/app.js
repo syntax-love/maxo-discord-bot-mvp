@@ -4,6 +4,10 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 const fs = require('fs');
+const RedisStore = require('connect-redis')(session);
+const { createClient } = require('redis');
+const helmet = require('helmet');
+const logger = require('./logger');
 
 // Initialize passport configuration
 require('./passportConfig');
@@ -16,12 +20,21 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 
 // Session middleware setup
-app.use(session({
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+redisClient.on('error', (err) => console.error('Redis Client Error', err));
+redisClient.connect().catch(console.error);
+
+app.use(
+  session({
+    store: new RedisStore({ client: redisClient }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Set to false for HTTP (local) – enable true on HTTPS/production with proper setup
-}));
+    cookie: { secure: false } // Set secure to true once you use HTTPS in production
+  })
+);
 
 // Initialize passport middleware
 app.use(passport.initialize());
@@ -32,6 +45,9 @@ app.use('/auth', require('./auth'));
 
 // Use API routes
 app.use('/api', require('./api'));
+
+// Use helmet middleware
+app.use(helmet());
 
 // Determine the absolute path to the dashboard build folder.
 // This assumes your structure is as follows:
@@ -68,6 +84,7 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+logger.info(`Server is running on port ${PORT}`);
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    logger.info(`Server is running on port ${PORT}`);
 });

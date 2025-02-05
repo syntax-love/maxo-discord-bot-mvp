@@ -1,18 +1,18 @@
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Dashboard from './Dashboard';
+import DashboardHome from './DashboardHome';
+import Transactions from './Transactions';
 
 function App() {
   const [user, setUser] = useState(null);
 
-  // On mount, check if the user is authenticated via the API endpoint.
+  // Fetch user data when the component mounts
   useEffect(() => {
-    axios
-      .get('/api/user', { withCredentials: true })
-      .then((res) => setUser(res.data))
-      .catch((err) => {
-        console.error(err);
+    axios.get('/api/user', { withCredentials: true })
+      .then(res => setUser(res.data))
+      .catch(err => {
+        console.error('Error fetching user:', err);
         setUser(null);
       });
   }, []);
@@ -30,16 +30,20 @@ function App() {
 
   return (
     <Router>
-      <div style={{ padding: '2rem' }}>
-        <header>
-          <h1>Admin Dashboard</h1>
-          <p>Welcome, {user.username}!</p>
+      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
+        <h1>Admin Dashboard</h1>
+        <nav>
+          <Link to="/">Home</Link> |{' '}
+          <Link to="/transactions">Transactions</Link> |{' '}
           <a href="/auth/logout">Logout</a>
-        </header>
+        </nav>
+      </header>
+      <main style={{ padding: '1rem' }}>
         <Routes>
-          <Route path="/*" element={<Dashboard user={user} />} />
+          <Route path="/" element={<DashboardHome user={user} />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Routes>
-      </div>
+      </main>
     </Router>
   );
 }
