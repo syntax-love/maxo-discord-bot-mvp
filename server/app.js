@@ -43,8 +43,8 @@ app.use('/api', require('./api'));
 //     └── app.js
 //
 // Using process.cwd() allows us to reliably locate the folder even if __dirname is not as expected.
-const buildPath = path.join(process.cwd(), 'dashboard', 'build');
-console.log('Build path:', buildPath); // Add this for debugging
+const buildPath = path.join(process.cwd(), 'src', 'dashboard', 'build');
+console.log('Final build path:', buildPath); // Verify in logs
 
 // Verify build directory exists
 if (!fs.existsSync(buildPath)) {
