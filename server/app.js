@@ -4,8 +4,8 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 const fs = require('fs');
-const RedisStore = require('connect-redis')(session);
 const { createClient } = require('redis');
+const RedisStore = require('connect-redis').default;
 const helmet = require('helmet');
 const logger = require('./logger');
 
@@ -23,16 +23,20 @@ app.use(cors({ origin: true, credentials: true }));
 const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
 });
-redisClient.on('error', (err) => console.error('Redis Client Error', err));
+redisClient.on('error', err => console.error('Redis Client Error', err));
 redisClient.connect().catch(console.error);
 
+// Configure session store
 app.use(
   session({
     store: new RedisStore({ client: redisClient }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Set secure to true once you use HTTPS in production
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 86400000 // 24 hours
+    }
   })
 );
 
