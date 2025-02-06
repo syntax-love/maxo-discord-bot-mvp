@@ -2,26 +2,51 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 
-// Discord OAuth routes
-router.get('/discord', passport.authenticate('discord'));
-
-router.get('/discord/callback', 
+// Add error handling middleware
+const handleAuth = (req, res, next) => {
   passport.authenticate('discord', { 
-    failureRedirect: '/login'
-  }),
+    failureRedirect: '/',
+    successRedirect: '/dashboard',
+    failWithError: true
+  })(req, res, (err) => {
+    if (err) {
+      console.error('Authentication Error:', err);
+      return res.redirect('/?error=auth_failed');
+    }
+    next();
+  });
+};
+
+// Initial Discord OAuth route
+router.get('/discord', (req, res, next) => {
+  // Log the start of OAuth process
+  console.log('Starting Discord OAuth process');
+  
+  passport.authenticate('discord', {
+    scope: ['identify', 'email'],
+    state: true,
+    prompt: 'consent'
+  })(req, res, next);
+});
+
+// OAuth callback route
+router.get('/discord/callback', 
+  handleAuth,
   (req, res) => {
-    console.log('Auth successful, session:', req.session);
-    console.log('Auth successful, user:', req.user);
+    console.log('OAuth Callback - Session:', req.session);
+    console.log('OAuth Callback - User:', req.user);
     
-    // Set session explicitly
-    req.session.user = req.user;
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-      }
-      console.log('Session saved successfully');
-      res.redirect('/dashboard');
-    });
+    if (req.user) {
+      req.session.user = req.user;
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+        }
+        res.redirect('/dashboard');
+      });
+    } else {
+      res.redirect('/?error=no_user');
+    }
   }
 );
 
@@ -35,19 +60,16 @@ router.get('/logout', (req, res) => {
   });
 });
 
-// Check auth status
+// Status check route
 router.get('/status', (req, res) => {
-  console.log('Status check - Session:', req.session);
-  console.log('Status check - User:', req.user);
-  console.log('Status check - Is Authenticated:', req.isAuthenticated());
-  
-  // Check both session.user and passport.user
-  const isAuthenticated = req.isAuthenticated() || !!req.session.user;
-  const user = req.user || req.session.user;
+  console.log('Status Check - Session:', req.session);
+  console.log('Status Check - User:', req.user);
+  console.log('Status Check - Is Authenticated:', req.isAuthenticated());
   
   res.json({
-    isAuthenticated,
-    user
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user || null,
+    session: req.session
   });
 });
 

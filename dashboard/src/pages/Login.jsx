@@ -1,17 +1,44 @@
-import { Box, Button, Container, Heading, Text, useColorMode } from '@chakra-ui/react';
+import { Box, Button, Container, Heading, Text, useColorMode, useToast } from '@chakra-ui/react';
 import { FaDiscord } from 'react-icons/fa';
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Login() {
   const { colorMode } = useColorMode();
+  const toast = useToast();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check for error parameter
+    const error = searchParams.get('error');
+    if (error) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Failed to log in with Discord. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleLogin = () => {
+    // Generate state parameter for CSRF protection
+    const state = Math.random().toString(36).substring(7);
+    sessionStorage.setItem('oauth_state', state);
+    
     const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
     const REDIRECT_URI = import.meta.env.VITE_DISCORD_REDIRECT_URI;
     
-    const DISCORD_OAUTH_URL = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20email%20guilds`;
+    const authUrl = new URL('https://discord.com/api/oauth2/authorize');
+    authUrl.searchParams.append('client_id', DISCORD_CLIENT_ID);
+    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('scope', 'identify email');
+    authUrl.searchParams.append('state', state);
+    authUrl.searchParams.append('prompt', 'consent');
     
-    console.log('Redirecting to:', DISCORD_OAUTH_URL); // For debugging
-    window.location.href = DISCORD_OAUTH_URL;
+    window.location.href = authUrl.toString();
   };
 
   return (
