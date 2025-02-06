@@ -23,21 +23,17 @@ export default function Login() {
   }, [searchParams, toast]);
 
   const handleLogin = () => {
-    // Generate state parameter for CSRF protection
-    const state = Math.random().toString(36).substring(7);
-    sessionStorage.setItem('oauth_state', state);
-    
     const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
-    const REDIRECT_URI = import.meta.env.VITE_DISCORD_REDIRECT_URI;
+    const REDIRECT_URI = 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback';
     
     const authUrl = new URL('https://discord.com/api/oauth2/authorize');
     authUrl.searchParams.append('client_id', DISCORD_CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+    authUrl.searchParams.append('redirect_uri', encodeURIComponent(REDIRECT_URI));
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('scope', 'identify email');
-    authUrl.searchParams.append('state', state);
     authUrl.searchParams.append('prompt', 'consent');
     
+    console.log('Redirecting to:', authUrl.toString());
     window.location.href = authUrl.toString();
   };
 
