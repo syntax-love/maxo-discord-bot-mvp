@@ -5,8 +5,13 @@ export default function Login() {
   const { colorMode } = useColorMode();
 
   const handleLogin = () => {
-    // Discord OAuth URL - replace CLIENT_ID with your actual client ID
-    window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${import.meta.env.VITE_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(import.meta.env.VITE_DISCORD_REDIRECT_URI)}&response_type=code&scope=identify%20email`;
+    const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
+    const REDIRECT_URI = import.meta.env.VITE_DISCORD_REDIRECT_URI;
+    
+    const DISCORD_OAUTH_URL = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20email%20guilds`;
+    
+    console.log('Redirecting to:', DISCORD_OAUTH_URL); // For debugging
+    window.location.href = DISCORD_OAUTH_URL;
   };
 
   return (
