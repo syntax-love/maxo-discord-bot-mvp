@@ -9,7 +9,15 @@ export default function Login() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Check for error parameter
+    // Debug logging
+    console.log('Environment variables:', {
+      VITE_DISCORD_CLIENT_ID: import.meta.env.VITE_DISCORD_CLIENT_ID,
+      MODE: import.meta.env.MODE,
+      DEV: import.meta.env.DEV,
+      PROD: import.meta.env.PROD,
+      BASE_URL: import.meta.env.BASE_URL,
+    });
+    
     const error = searchParams.get('error');
     if (error) {
       toast({
@@ -23,17 +31,26 @@ export default function Login() {
   }, [searchParams, toast]);
 
   const handleLogin = () => {
-    const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
+    // Force production URL regardless of environment
+    const redirectUri = 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback';
+    const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
+    
+    console.log('Login attempt with:', {
+      clientId,
+      redirectUri
+    });
     
     const authUrl = new URL('https://discord.com/api/oauth2/authorize');
-    authUrl.searchParams.append('client_id', DISCORD_CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback');
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('scope', 'identify email');
-    authUrl.searchParams.append('prompt', 'consent');
+    authUrl.searchParams.set('client_id', clientId);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('scope', 'identify email');
+    authUrl.searchParams.set('prompt', 'consent');
     
-    console.log('Redirecting to:', authUrl.toString());
-    window.location.href = authUrl.toString();
+    const finalUrl = authUrl.toString();
+    console.log('Redirecting to:', finalUrl);
+    
+    window.location.href = finalUrl;
   };
 
   return (
