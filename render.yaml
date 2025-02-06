@@ -7,7 +7,7 @@ services:
       npm install && \
       npm install -D vite@latest @vitejs/plugin-react@latest && \
       npm pkg set type="commonjs" && \
-      ./node_modules/.bin/vite build && \
+      VITE_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID} ./node_modules/.bin/vite build && \
       cd .. && \
       npm install
     startCommand: node server/app.js
@@ -24,7 +24,7 @@ services:
       - key: DISCORD_CLIENT_SECRET
         sync: false
       - key: DISCORD_REDIRECT_URI
-        value: https://your-app.onrender.com/auth/discord/callback
+        value: https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback
       - key: MONGODB_URI
         sync: false
     staticPublishPath: dashboard/dist
