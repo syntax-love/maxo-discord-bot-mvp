@@ -1,18 +1,18 @@
 services:
   - type: web
-    name: discord-bot-mvp
+    name: discord-bot-dashboard
     runtime: node
     buildCommand: |
       cd dashboard && npm install && npm run build
-      ls -la dist # Verify output
       cd .. && npm install
     startCommand: node server/app.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: GUILD_ID
-        value: 1335686213931237437
-      - key: PORT
-        value: 3000
-    plan: free
-    staticPublishPath: "dashboard/build"
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_REDIRECT_URI
+        value: https://your-app.onrender.com/auth/callback
+    staticPublishPath: dashboard/dist # Vite builds to 'dist' by default
