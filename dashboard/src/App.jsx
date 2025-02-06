@@ -1,4 +1,4 @@
-import { ChakraProvider, ColorModeScript } from '@chakra-ui/react';
+import { ChakraProvider, ColorModeScript, Spinner, Center, Text, VStack } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -12,7 +12,7 @@ axios.defaults.withCredentials = true;
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,47 +21,62 @@ function App() {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/status`, {
           credentials: 'include',
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
           }
         });
-        
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
-        console.log('Auth response:', data);
-        
+        console.log('Auth status response:', data);
+
         if (data.isAuthenticated && data.user) {
-          console.log('Setting user:', data.user);
           setUser(data.user);
         } else {
-          console.log('No authenticated user found');
           setUser(null);
         }
-      } catch (error) {
-        console.error('Auth check failed:', error);
+      } catch (err) {
+        console.error('Auth check error:', err);
+        setError(err.message);
         setUser(null);
       } finally {
         setLoading(false);
-        setAuthChecked(true);
       }
     };
 
     checkAuth();
   }, []);
 
-  // Show loading state
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <ChakraProvider theme={theme}>
+        <Center height="100vh">
+          <VStack spacing={4}>
+            <Spinner size="xl" />
+            <Text>Loading...</Text>
+          </VStack>
+        </Center>
+      </ChakraProvider>
+    );
   }
 
-  // Only render routes after auth check
-  if (!authChecked) {
-    return null;
+  if (error) {
+    return (
+      <ChakraProvider theme={theme}>
+        <Center height="100vh">
+          <Text color="red.500">Error: {error}</Text>
+        </Center>
+      </ChakraProvider>
+    );
   }
 
   return (
     <ChakraProvider theme={theme}>
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <Router>
-        {console.log('Current user state:', user)}
         <Routes>
           <Route 
             path="/" 
@@ -79,7 +94,7 @@ function App() {
           />
           <Route 
             path="/auth/discord/callback" 
-            element={<Navigate to="/dashboard" replace />} 
+            element={<Center height="100vh"><Spinner /></Center>} 
           />
         </Routes>
       </Router>
