@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import theme from './theme';
 
 function App() {
@@ -11,7 +12,9 @@ function App() {
 
   useEffect(() => {
     // Check if user is logged in
-    axios.get(`${import.meta.env.VITE_API_URL}/api/user`, { withCredentials: true })
+    axios.get(`${import.meta.env.VITE_API_URL}/api/user`, { 
+      withCredentials: true 
+    })
       .then(res => {
         setUser(res.data);
         setLoading(false);
@@ -35,7 +38,14 @@ function App() {
             path="/" 
             element={user ? <Navigate to="/dashboard" /> : <Login />} 
           />
-          {/* Add more routes here later */}
+          <Route 
+            path="/dashboard" 
+            element={user ? <Dashboard /> : <Navigate to="/" />} 
+          />
+          <Route 
+            path="/auth/discord/callback" 
+            element={<Navigate to="/dashboard" />} 
+          />
         </Routes>
       </Router>
     </ChakraProvider>
