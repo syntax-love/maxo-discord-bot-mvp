@@ -3,8 +3,8 @@ services:
     name: discord-bot-dashboard
     runtime: node
     buildCommand: |
-      cd dashboard && rm -rf node_modules package-lock.json && npm install && npm run build
-      cd .. && rm -rf node_modules package-lock.json && npm install
+      cd dashboard && npm install && npm install vite @vitejs/plugin-react -D && npm run build
+      cd .. && npm install
     startCommand: node server/app.js
     envVars:
       - key: NODE_ENV
@@ -18,7 +18,7 @@ services:
       - key: DISCORD_CLIENT_SECRET
         sync: false
       - key: DISCORD_REDIRECT_URI
-        value: https://your-app.onrender.com/auth/callback
+        value: https://your-app.onrender.com/auth/discord/callback
       - key: MONGODB_URI
         sync: false
     staticPublishPath: dashboard/dist
