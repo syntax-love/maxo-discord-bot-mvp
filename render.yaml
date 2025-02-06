@@ -4,14 +4,14 @@ services:
     runtime: node
     buildCommand: |
       cd dashboard && \
-      rm -rf node_modules package-lock.json && \
       npm install && \
       npm install -D vite@latest @vitejs/plugin-react@latest && \
-      node node_modules/vite/bin/vite.js build && \
+      npm pkg set type="commonjs" && \
+      ./node_modules/.bin/vite build && \
       cd .. && \
-      rm -rf node_modules package-lock.json && \
       npm install
     startCommand: node server/app.js
+    env: node
     envVars:
       - key: NODE_ENV
         value: production

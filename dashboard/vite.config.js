@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+const { defineConfig } = require('vite');
+const react = require('@vitejs/plugin-react');
+const path = require('path');
 
 // https://vite.dev/config/
-export default defineConfig({
+module.exports = defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
@@ -23,4 +23,4 @@ export default defineConfig({
       '/auth': 'http://localhost:3001'
     },
   },
-})
+});
