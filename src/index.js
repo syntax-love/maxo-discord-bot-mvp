@@ -20,6 +20,13 @@ const QRCode = require('qrcode');
 // Import the NowPayments service module.
 const NowPaymentsService = require('./payments/nowPaymentsService');
 
+// Import the role mapping
+const tierRoleMapping = {
+  pearl: '1335686254993477663',    // Replace with actual Pearl role ID
+  sapphire: '1335835802999197716', // Replace with actual Sapphire role ID
+  diamond: '1335835830836789341'   // Replace with actual Diamond role ID
+};
+
 // Retrieve your Discord bot token and guild ID (for testing command registration).
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD_ID = process.env.GUILD_ID; // For registering guild-specific commands
@@ -36,6 +43,31 @@ if (!process.env.NOWPAYMENTS_API_KEY) {
 
 // Create a new Discord client with required intents.
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+// Promo code mapping (in production, this should be in a database)
+const promoCodes = {
+  'LAUNCH2025': {
+    discount: 0.20,  // 20% off
+    expires: new Date('2025-12-31'),
+    validTiers: ['sapphire', 'diamond'],
+    oneTime: true,
+    usedBy: new Set()  // Track who's used this code
+  },
+  'SPECIAL50': {
+    discount: 0.50,  // 50% off
+    expires: new Date('2025-03-01'),
+    validTiers: ['diamond'],
+    oneTime: true,
+    usedBy: new Set()
+  }
+};
+
+// Channel IDs (replace with actual channel IDs)
+const channels = {
+  lounge: 'LOUNGE_CHANNEL_ID',
+  privateSuite: 'PRIVATE_SUITE_CHANNEL_ID',
+  penthouse: 'PENTHOUSE_CHANNEL_ID'
+};
 
 /**
  * Registers the slash commands in the targeted guild.
@@ -59,9 +91,9 @@ async function registerCommands(guild) {
         type: ApplicationCommandOptionType.String,
         required: true,
         choices: [
-          { name: 'Pearl', value: 'pearl' },
-          { name: 'Sapphire', value: 'sapphire' },
-          { name: 'Diamond', value: 'diamond' }
+          { name: 'Pearl (FREE)', value: 'pearl' },
+          { name: 'Sapphire ($9.97/week)', value: 'sapphire' },
+          { name: 'Diamond ($39.97/lifetime)', value: 'diamond' }
         ]
       },
       {
@@ -71,10 +103,15 @@ async function registerCommands(guild) {
         required: true,
         choices: [
           { name: 'BTC', value: 'btc' },
-          { name: 'ETH', value: 'eth' },
           { name: 'LTC', value: 'ltc' },
           { name: 'SOL', value: 'sol' }
         ]
+      },
+      {
+        name: 'promo',
+        description: 'Enter a promotional code (optional)',
+        type: ApplicationCommandOptionType.String,
+        required: false
       }
     ]
   };
@@ -82,21 +119,44 @@ async function registerCommands(guild) {
   // Command to check a payment status.
   const checkPaymentCommand = {
     name: 'checkpayment',
-    description: 'Check the status of a payment using its Payment ID',
+    description: 'Check the status of your premium payment',
     options: [
       {
         name: 'paymentid',
-        description: 'The Payment ID returned from /premium',
+        description: 'Your payment ID',
         type: ApplicationCommandOptionType.String,
-        required: true,
-      },
-    ],
+        required: true
+      }
+    ]
+  };
+
+  // Enhanced search command with detailed service information
+  const searchCommand = {
+    name: 'search',
+    description: 'Browse available premium tiers and their benefits',
+    options: []
+  };
+
+  const subscriptionCommand = {
+    name: 'subscription',
+    description: 'Check your current subscription status and remaining time',
+    options: []
+  };
+
+  // Add command to check available promo codes (admin only)
+  const promoListCommand = {
+    name: 'promolist',
+    description: 'List all promotional codes (Admin only)',
+    options: []
   };
 
   try {
     await guild.commands.create(currenciesCommand);
     await guild.commands.create(premiumCommand);
     await guild.commands.create(checkPaymentCommand);
+    await guild.commands.create(searchCommand);
+    await guild.commands.create(subscriptionCommand);
+    await guild.commands.create(promoListCommand);
     console.log(`Registered slash commands in guild: ${guild.name}`);
   } catch (error) {
     console.error('Error registering slash commands:', error);
@@ -124,6 +184,42 @@ client.once('ready', async () => {
   }
   // Register our slash commands.
   await registerCommands(guild);
+
+  // Start checking for expired Sapphire subscriptions
+  setInterval(async () => {
+    try {
+      const guild = client.guilds.cache.get(process.env.GUILD_ID);
+      if (!guild) return;
+
+      const sapphireRole = guild.roles.cache.get(tierRoleMapping.sapphire);
+      if (!sapphireRole) return;
+
+      // Check all members with Sapphire role
+      for (const [memberId, member] of sapphireRole.members) {
+        const expiryDate = await getSubscriptionExpiry(memberId);
+        if (expiryDate < new Date()) {
+          await member.roles.remove(sapphireRole);
+          await updateChannelAccess(member);
+          
+          try {
+            await member.send({
+              embeds: [
+                new EmbedBuilder()
+                  .setTitle('Subscription Expired')
+                  .setColor(0xFF0000)
+                  .setDescription('Your Sapphire subscription has expired. Use `/premium` to renew!')
+                  .setTimestamp()
+              ]
+            });
+          } catch (dmError) {
+            console.error(`Could not send expiry DM to ${memberId}:`, dmError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in subscription check interval:', error);
+    }
+  }, 60 * 60 * 1000); // Check every hour
 });
 
 // Listen for interaction events from Discord (slash commands).
@@ -139,6 +235,7 @@ client.on('interactionCreate', async (interaction) => {
     try {
       const currencies = await nowPayments.getAvailableCurrencies();
       const currencyList = Array.isArray(currencies) ? currencies.join(', ') : 'No currencies found';
+      
       await interaction.editReply(`Available Currencies: ${currencyList}`);
     } catch (error) {
       console.error('Error executing /currencies command:', error);
@@ -155,14 +252,59 @@ client.on('interactionCreate', async (interaction) => {
       // Retrieve selected options from the command.
       const tierSelection = interaction.options.getString('tier');
       const cryptoSelection = interaction.options.getString('crypto');
+      const promoCode = interaction.options.getString('promo')?.toUpperCase();
 
       // Map tier selections to prices.
       const tierPrices = {
-        pearl: '50.00',
-        sapphire: '100.00',
-        diamond: '200.00'
+        pearl: '0.00',
+        sapphire: '9.97',
+        diamond: '39.97'
       };
       const priceAmount = tierPrices[tierSelection];
+
+      // Add subscription types
+      const tierTypes = {
+        pearl: 'free',
+        sapphire: 'weekly',
+        diamond: 'lifetime'
+      };
+
+      // Validate and apply promo code if provided
+      let finalPrice = tierPrices[tierSelection];
+      let promoApplied = false;
+      let promoDetails = null;
+
+      if (promoCode) {
+        const promo = promoCodes[promoCode];
+        if (promo) {
+          // Check if promo is valid
+          const now = new Date();
+          if (now > promo.expires) {
+            await interaction.editReply('This promotional code has expired.');
+            return;
+          }
+
+          // Check if promo is valid for selected tier
+          if (!promo.validTiers.includes(tierSelection)) {
+            await interaction.editReply('This promotional code is not valid for the selected tier.');
+            return;
+          }
+
+          // Check if user has already used this one-time code
+          if (promo.oneTime && promo.usedBy.has(interaction.user.id)) {
+            await interaction.editReply('You have already used this promotional code.');
+            return;
+          }
+
+          // Apply discount
+          finalPrice = (parseFloat(finalPrice) * (1 - promo.discount)).toFixed(2);
+          promoApplied = true;
+          promoDetails = promo;
+        } else {
+          await interaction.editReply('Invalid promotional code.');
+          return;
+        }
+      }
 
       // Generate a unique order ID.
       const orderId = `order_${interaction.user.id}_${Date.now()}`;
@@ -170,9 +312,10 @@ client.on('interactionCreate', async (interaction) => {
       // Define the payment data with dynamic price_amount.
       const paymentData = {
         order_id: orderId,
-        price_amount: priceAmount,
+        price_amount: finalPrice,
         price_currency: 'usd',
-        pay_currency: cryptoSelection
+        pay_currency: cryptoSelection,
+        order_description: `${tierSelection.toUpperCase()} Subscription${promoApplied ? ' with promo ' + promoCode : ''}`
         // Optional: ipn_callback_url: 'http://your-callback-url.com/ipn'
       };
 
@@ -225,6 +368,18 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
         .setImage('attachment://qr.png')
         .setTimestamp();
 
+      if (promoApplied) {
+        embed.addFields({
+          name: 'Promo Applied',
+          value: `${promoCode} (${promoDetails.discount * 100}% off)`
+        });
+      }
+
+      // If payment created successfully, mark promo as used if applicable
+      if (promoApplied && promoDetails.oneTime) {
+        promoDetails.usedBy.add(interaction.user.id);
+      }
+
       // Send the payment embed with QR code as a DM.
       try {
         await interaction.user.send({ embeds: [embed], files: [qrAttachment] });
@@ -240,7 +395,8 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
       // Save the mapping (this can be persisted in a database in production).
       orderMapping[paymentResponse.order_id] = {
         userId: interaction.user.id,
-        tier: tierSelection // e.g., "pearl", "sapphire", or "diamond"
+        tier: tierSelection,
+        promoApplied: promoApplied ? promoCode : null
       };
     } catch (error) {
       console.error('Error executing /premium command:', error);
@@ -248,25 +404,296 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
     }
   }
 
+  // Add payment verification and role assignment
+  async function verifyAndAssignRole(paymentId, orderId) {
+    try {
+      // Get payment status from NowPayments
+      const statusResponse = await nowPayments.getPaymentStatus(paymentId);
+      
+      // Get order details from our mapping
+      const orderDetails = orderMapping[orderId];
+      if (!orderDetails) {
+        console.error(`Order ${orderId} not found in mapping`);
+        return false;
+      }
+
+      // Get the guild and member
+      const guild = client.guilds.cache.get(process.env.GUILD_ID);
+      const member = await guild.members.fetch(orderDetails.userId);
+
+      if (statusResponse.payment_status === 'finished' || statusResponse.payment_status === 'confirmed') {
+        // Remove any existing tier roles
+        await member.roles.remove([
+          tierRoleMapping.sapphire,
+          tierRoleMapping.diamond
+        ]).catch(console.error);
+
+        // Assign new role based on tier
+        const roleId = tierRoleMapping[orderDetails.tier];
+        if (roleId) {
+          await member.roles.add(roleId);
+          
+          // Update channel permissions
+          await updateChannelAccess(member);
+
+          // Send confirmation DM
+          try {
+            const embed = new EmbedBuilder()
+              .setTitle('🎉 Premium Activated!')
+              .setColor(0x00AE86)
+              .setDescription(`Your ${orderDetails.tier} subscription is now active!`)
+              .addFields(
+                { 
+                  name: 'Tier', 
+                  value: orderDetails.tier.charAt(0).toUpperCase() + orderDetails.tier.slice(1),
+                  inline: true 
+                },
+                { 
+                  name: 'Payment ID', 
+                  value: paymentId,
+                  inline: true 
+                }
+              )
+              .setTimestamp();
+
+            await member.send({ embeds: [embed] });
+          } catch (dmError) {
+            console.error('Could not send confirmation DM:', dmError);
+          }
+
+          // For Sapphire tier, set up expiration
+          if (orderDetails.tier === 'sapphire') {
+            // Store subscription expiry (7 days from now)
+            const expiryDate = new Date(Date.now() + (7 * 24 * 60 * 60 * 1000));
+            // In production, save this to a database
+            console.log(`Sapphire subscription for ${member.user.tag} expires: ${expiryDate}`);
+          }
+
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error in verifyAndAssignRole:', error);
+      return false;
+    }
+  }
+
   // /checkpayment command remains unchanged.
   if (commandName === 'checkpayment') {
-    const nowPayments = new NowPaymentsService(process.env.NOWPAYMENTS_API_KEY);
     await interaction.deferReply({ ephemeral: true });
+    
     try {
       const paymentId = interaction.options.getString('paymentid');
-      const statusResponse = await nowPayments.getPaymentStatus(paymentId);
+      const success = await verifyAndAssignRole(paymentId, `ORDER_${paymentId}`);
+      
+      if (success) {
+        await interaction.editReply('✅ Payment verified! Your premium role has been assigned.');
+      } else {
+        await interaction.editReply('Payment is still pending or not found. Please try again later or contact support if you need help.');
+      }
+    } catch (error) {
+      console.error('Error in checkpayment command:', error);
+      await interaction.editReply('An error occurred while checking your payment. Please try again later.');
+    }
+  }
+
+  // Add handler for the new /search command
+  if (commandName === 'search') {
+    await interaction.deferReply();
+    
+    const embed = new EmbedBuilder()
+      .setTitle('🌟 Premium Tiers & Benefits')
+      .setColor(0x00AE86)
+      .setDescription('Explore our exclusive membership tiers:')
+      .addFields(
+        {
+          name: '💎 Pearl (FREE)',
+          value: `• Access to Lounge (general chat)
+                 • Basic community features
+                 • View announcements
+                 
+                 Price: FREE`,
+          inline: false
+        },
+        {
+          name: '🔷 Sapphire ($9.97/week)',
+          value: `• All Pearl features
+                 • Access to Private Suite
+                 • Weekly exclusive content
+                 • Premium community status
+                 • Priority support
+                 
+                 Price: $9.97/week
+                 Use \`/premium tier:sapphire\` to subscribe`,
+          inline: false
+        },
+        {
+          name: '💠 Diamond ($39.97/lifetime)',
+          value: `• All Sapphire features
+                 • Access to Penthouse (exclusive channel)
+                 • Lifetime benefits
+                 • Special perks and bonuses
+                 • VIP status
+                 • Early access to new features
+                 • Custom profile badge
+                 
+                 Price: $39.97 (one-time payment)
+                 Use \`/premium tier:diamond\` to subscribe`,
+          inline: false
+        }
+      )
+      .setFooter({ 
+        text: 'Use /premium to subscribe • Crypto payments accepted: BTC, LTC, SOL' 
+      });
+
+    await interaction.editReply({ embeds: [embed] });
+  }
+
+  // Add handler for the new /subscription command
+  if (commandName === 'subscription') {
+    await interaction.deferReply({ ephemeral: true });
+    
+    try {
+      // Get user's roles
+      const member = interaction.member;
+      const roles = member.roles.cache;
+      
+      // Check which premium role they have
+      let subscriptionDetails = {
+        tier: 'None',
+        status: 'No active subscription',
+        expiry: null
+      };
+
+      if (roles.has(tierRoleMapping.diamond)) {
+        subscriptionDetails = {
+          tier: 'Diamond',
+          status: 'Active (Lifetime)',
+          expiry: 'Never'
+        };
+      } else if (roles.has(tierRoleMapping.sapphire)) {
+        // Fetch expiry from database (implementation needed)
+        const expiryDate = await getSubscriptionExpiry(interaction.user.id);
+        const now = new Date();
+        
+        subscriptionDetails = {
+          tier: 'Sapphire',
+          status: expiryDate > now ? 'Active' : 'Expired',
+          expiry: expiryDate.toLocaleString()
+        };
+      } else if (roles.has(tierRoleMapping.pearl)) {
+        subscriptionDetails = {
+          tier: 'Pearl',
+          status: 'Active (Free)',
+          expiry: 'Never'
+        };
+      }
+
       const embed = new EmbedBuilder()
-        .setTitle('Payment Status')
+        .setTitle('Subscription Status')
         .setColor(0x00AE86)
         .addFields(
-          { name: 'Payment ID', value: paymentId.toString(), inline: true },
-          { name: 'Status', value: statusResponse.payment_status, inline: true }
+          { name: 'Current Tier', value: subscriptionDetails.tier, inline: true },
+          { name: 'Status', value: subscriptionDetails.status, inline: true },
+          { name: 'Expires', value: subscriptionDetails.expiry || 'N/A', inline: true }
         )
         .setTimestamp();
+
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      console.error('Error executing /checkpayment command:', error);
-      await interaction.editReply(`Failed to check payment status. Error: ${error.message}`);
+      console.error('Error checking subscription:', error);
+      await interaction.editReply('Failed to check subscription status. Please try again later.');
+    }
+  }
+
+  // Add handler for promolist command
+  if (commandName === 'promolist') {
+    await interaction.deferReply({ ephemeral: true });
+
+    // Check if user has admin role
+    if (!interaction.member.permissions.has('Administrator')) {
+      await interaction.editReply('You do not have permission to use this command.');
+      return;
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle('Active Promotional Codes')
+      .setColor(0x00AE86)
+      .setDescription('Current promotional codes and their details:')
+      .setTimestamp();
+
+    for (const [code, details] of Object.entries(promoCodes)) {
+      const isExpired = new Date() > details.expires;
+      embed.addFields({
+        name: code,
+        value: `Discount: ${details.discount * 100}%
+                Valid Tiers: ${details.validTiers.join(', ')}
+                Expires: ${details.expires.toLocaleDateString()}
+                One-Time Use: ${details.oneTime ? 'Yes' : 'No'}
+                Status: ${isExpired ? '❌ Expired' : '✅ Active'}
+                Times Used: ${details.usedBy.size}`
+      });
+    }
+
+    await interaction.editReply({ embeds: [embed] });
+  }
+});
+
+// Add subscription expiry checking function
+async function getSubscriptionExpiry(userId) {
+  // For now, return a dummy date 7 days from purchase
+  // This should be replaced with actual database lookup
+  return new Date(Date.now() + (7 * 24 * 60 * 60 * 1000));
+}
+
+// Function to manage channel access when roles change
+async function updateChannelAccess(member) {
+  const guild = member.guild;
+  
+  // Get channels
+  const loungeChannel = guild.channels.cache.get(channels.lounge);
+  const privateSuiteChannel = guild.channels.cache.get(channels.privateSuite);
+  const penthouseChannel = guild.channels.cache.get(channels.penthouse);
+  
+  // Get user's roles
+  const roles = member.roles.cache;
+  
+  // Pearl (everyone) gets Lounge access
+  if (loungeChannel) {
+    await loungeChannel.permissionOverwrites.edit(member.id, {
+      ViewChannel: true,
+      SendMessages: true
+    });
+  }
+  
+  // Sapphire and Diamond get Private Suite access
+  if (privateSuiteChannel) {
+    const hasAccess = roles.has(tierRoleMapping.sapphire) || roles.has(tierRoleMapping.diamond);
+    await privateSuiteChannel.permissionOverwrites.edit(member.id, {
+      ViewChannel: hasAccess,
+      SendMessages: hasAccess
+    });
+  }
+  
+  // Only Diamond gets Penthouse access
+  if (penthouseChannel) {
+    const hasAccess = roles.has(tierRoleMapping.diamond);
+    await penthouseChannel.permissionOverwrites.edit(member.id, {
+      ViewChannel: hasAccess,
+      SendMessages: hasAccess
+    });
+  }
+}
+
+// Add role update listener
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  // Check if roles changed
+  if (oldMember.roles.cache.size !== newMember.roles.cache.size) {
+    try {
+      await updateChannelAccess(newMember);
+    } catch (error) {
+      console.error('Error updating channel access:', error);
     }
   }
 });
