@@ -12,26 +12,27 @@ axios.defaults.withCredentials = true;
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    console.log('Checking authentication status...');
-    
-    // Check auth status
     const checkAuth = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/status`, {
-          withCredentials: true,
+        console.log('Checking auth status...');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/status`, {
+          credentials: 'include',
           headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Accept': 'application/json'
           }
         });
         
-        console.log('Auth response:', response.data);
+        const data = await response.json();
+        console.log('Auth response:', data);
         
-        if (response.data.isAuthenticated) {
-          setUser(response.data.user);
+        if (data.isAuthenticated && data.user) {
+          console.log('Setting user:', data.user);
+          setUser(data.user);
         } else {
+          console.log('No authenticated user found');
           setUser(null);
         }
       } catch (error) {
@@ -39,20 +40,28 @@ function App() {
         setUser(null);
       } finally {
         setLoading(false);
+        setAuthChecked(true);
       }
     };
 
     checkAuth();
   }, []);
 
+  // Show loading state
   if (loading) {
     return <div>Loading...</div>;
+  }
+
+  // Only render routes after auth check
+  if (!authChecked) {
+    return null;
   }
 
   return (
     <ChakraProvider theme={theme}>
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <Router>
+        {console.log('Current user state:', user)}
         <Routes>
           <Route 
             path="/" 
@@ -64,13 +73,13 @@ function App() {
               user ? (
                 <Dashboard user={user} />
               ) : (
-                <Navigate to="/" state={{ from: '/dashboard' }} />
+                <Navigate to="/" replace state={{ from: '/dashboard' }} />
               )
             } 
           />
           <Route 
             path="/auth/discord/callback" 
-            element={<Navigate to="/dashboard" />} 
+            element={<Navigate to="/dashboard" replace />} 
           />
         </Routes>
       </Router>

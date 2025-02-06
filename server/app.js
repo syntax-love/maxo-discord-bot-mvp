@@ -22,20 +22,26 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Session store setup
+const MongoStore = require('connect-mongo');
+const sessionStore = MongoStore.create({
+  mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/discord-dashboard',
+  ttl: 24 * 60 * 60 // 1 day
+});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
+  resave: true,
   saveUninitialized: false,
+  store: sessionStore,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/',
-    domain: process.env.NODE_ENV === 'production' 
-      ? '.your-app.onrender.com' 
-      : 'localhost'
-  }
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  name: 'discord.sid'
 }));
 
 // Add this before routes
@@ -44,9 +50,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize passport
+// Initialize passport after session
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Add session debugging middleware
+app.use((req, res, next) => {
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
+  next();
+});
 
 // Routes
 app.use('/auth', authRoutes);

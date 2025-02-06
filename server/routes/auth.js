@@ -10,8 +10,18 @@ router.get('/discord/callback',
     failureRedirect: '/login'
   }),
   (req, res) => {
+    console.log('Auth successful, session:', req.session);
     console.log('Auth successful, user:', req.user);
-    res.redirect('/dashboard');
+    
+    // Set session explicitly
+    req.session.user = req.user;
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+      }
+      console.log('Session saved successfully');
+      res.redirect('/dashboard');
+    });
   }
 );
 
@@ -27,14 +37,17 @@ router.get('/logout', (req, res) => {
 
 // Check auth status
 router.get('/status', (req, res) => {
-  console.log('Checking auth status');
-  console.log('Session:', req.session);
-  console.log('User:', req.user);
-  console.log('Is Authenticated:', req.isAuthenticated());
+  console.log('Status check - Session:', req.session);
+  console.log('Status check - User:', req.user);
+  console.log('Status check - Is Authenticated:', req.isAuthenticated());
+  
+  // Check both session.user and passport.user
+  const isAuthenticated = req.isAuthenticated() || !!req.session.user;
+  const user = req.user || req.session.user;
   
   res.json({
-    isAuthenticated: req.isAuthenticated(),
-    user: req.user || null
+    isAuthenticated,
+    user
   });
 });
 
