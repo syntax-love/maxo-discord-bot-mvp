@@ -19,34 +19,36 @@ const handleAuth = (req, res, next) => {
 
 // Initial Discord OAuth route
 router.get('/discord', (req, res, next) => {
-  // Log the start of OAuth process
-  console.log('Starting Discord OAuth process');
-  
+  console.log('Starting Discord OAuth...');
   passport.authenticate('discord', {
     scope: ['identify', 'email'],
-    state: true,
     prompt: 'consent'
   })(req, res, next);
 });
 
 // OAuth callback route
 router.get('/discord/callback', 
-  handleAuth,
+  (req, res, next) => {
+    console.log('OAuth callback received');
+    console.log('Query params:', req.query);
+    next();
+  },
+  passport.authenticate('discord', { failureRedirect: '/' }),
   (req, res) => {
-    console.log('OAuth Callback - Session:', req.session);
-    console.log('OAuth Callback - User:', req.user);
-    
-    if (req.user) {
-      req.session.user = req.user;
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-        }
-        res.redirect('/dashboard');
-      });
-    } else {
-      res.redirect('/?error=no_user');
-    }
+    console.log('Authentication successful');
+    console.log('User:', req.user);
+    console.log('Session before save:', req.session);
+
+    // Explicitly set and save session
+    req.session.user = req.user;
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.redirect('/?error=session');
+      }
+      console.log('Session after save:', req.session);
+      res.redirect('/dashboard');
+    });
   }
 );
 
@@ -70,6 +72,16 @@ router.get('/status', (req, res) => {
     isAuthenticated: req.isAuthenticated(),
     user: req.user || null,
     session: req.session
+  });
+});
+
+// Add a debug route
+router.get('/debug', (req, res) => {
+  res.json({
+    session: req.session,
+    user: req.user,
+    isAuthenticated: req.isAuthenticated(),
+    cookies: req.cookies
   });
 });
 

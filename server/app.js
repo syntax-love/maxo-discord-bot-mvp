@@ -4,6 +4,7 @@ const passport = require('./config/passport');
 const cors = require('cors');
 const path = require('path');
 const MongoStore = require('connect-mongo');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
@@ -20,28 +21,23 @@ app.use(cors({
 
 app.use(express.json());
 
-// Session configuration with MongoDB store
+// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
+  resave: true,
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    collectionName: 'sessions',
-    ttl: 24 * 60 * 60, // 1 day
+    ttl: 24 * 60 * 60,
     autoRemove: 'native',
-    crypto: {
-      secret: process.env.SESSION_SECRET || 'your-secret-key'
-    }
+    touchAfter: 24 * 3600 // time period in seconds
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: process.env.NODE_ENV === 'production' 
-      ? '.onrender.com'  // This will work for your Render domain
-      : 'localhost'
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
   },
   name: 'discord.sid'
 }));
@@ -52,9 +48,12 @@ app.use(passport.session());
 
 // Session debugging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] Request to ${req.path}`);
-  console.log('Session ID:', req.sessionID);
-  console.log('Is Authenticated:', req.isAuthenticated());
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Session:', {
+    id: req.sessionID,
+    user: req.session?.user,
+    cookie: req.session?.cookie
+  });
   next();
 });
 
@@ -72,6 +71,36 @@ app.use(express.static(path.join(__dirname, '../dashboard/dist')));
 // Handle React routing, return all requests to React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
+});
+
+// Add detailed MongoDB connection logging
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB connected successfully');
+    // Test the connection
+    return mongoose.connection.db.admin().ping();
+  })
+  .then(() => {
+    console.log('MongoDB ping successful');
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    // Log more details about the connection attempt
+    console.log('MongoDB URI format check:', process.env.MONGODB_URI.startsWith('mongodb+srv://'));
+    console.log('MongoDB URI includes database:', process.env.MONGODB_URI.includes('discord-dashboard'));
+  });
+
+// Add connection event listeners
+mongoose.connection.on('error', err => {
+  console.error('MongoDB error event:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connected');
 });
 
 const PORT = process.env.PORT || 3001;
