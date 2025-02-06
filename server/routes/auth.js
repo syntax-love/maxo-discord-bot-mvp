@@ -27,29 +27,17 @@ router.get('/discord', (req, res, next) => {
 });
 
 // OAuth callback route
-router.get('/discord/callback', 
+router.get('/discord/callback',
   (req, res, next) => {
     console.log('OAuth callback received');
     console.log('Query params:', req.query);
+    console.log('Headers:', req.headers);
     next();
   },
-  passport.authenticate('discord', { failureRedirect: '/' }),
-  (req, res) => {
-    console.log('Authentication successful');
-    console.log('User:', req.user);
-    console.log('Session before save:', req.session);
-
-    // Explicitly set and save session
-    req.session.user = req.user;
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.redirect('/?error=session');
-      }
-      console.log('Session after save:', req.session);
-      res.redirect('/dashboard');
-    });
-  }
+  passport.authenticate('discord', {
+    failureRedirect: '/?error=auth_failed',
+    successRedirect: '/dashboard'
+  })
 );
 
 router.get('/logout', (req, res) => {

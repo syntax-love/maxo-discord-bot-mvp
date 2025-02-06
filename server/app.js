@@ -16,7 +16,7 @@ const DOMAIN = process.env.NODE_ENV === 'production'
 
 // CORS configuration
 app.use(cors({
-  origin: 'https://maxo-discord-bot-mvp.onrender.com',
+  origin: process.env.CLIENT_URL || 'https://maxo-discord-bot-mvp.onrender.com',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -48,9 +48,8 @@ app.use(passport.session());
 
 // Logging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
-  console.log('Session:', req.session);
   next();
 });
 
@@ -101,6 +100,19 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
   console.log('Domain:', DOMAIN);
+});
+
+app.use((err, req, res, next) => {
+    console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        code: err.code,
+        statusCode: err.statusCode
+    });
+    
+    res.status(err.status || 500).json({
+        error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+    });
 });
 
 module.exports = app;

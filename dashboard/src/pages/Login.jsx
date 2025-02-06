@@ -32,12 +32,13 @@ export default function Login() {
 
   const handleLogin = () => {
     const authUrl = new URL('https://discord.com/api/oauth2/authorize');
-    authUrl.searchParams.append('client_id', '1335678688712196146');
+    authUrl.searchParams.append('client_id', import.meta.env.VITE_DISCORD_CLIENT_ID);
     authUrl.searchParams.append('redirect_uri', 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('scope', 'identify email');
     authUrl.searchParams.append('prompt', 'consent');
     
+    console.log('Redirecting to:', authUrl.toString());
     window.location.href = authUrl.toString();
   };
 

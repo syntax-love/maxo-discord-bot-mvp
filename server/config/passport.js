@@ -20,18 +20,21 @@ passport.deserializeUser((user, done) => {
 passport.use(new DiscordStrategy({
     clientID: process.env.DISCORD_CLIENT_ID,
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    callbackURL: REDIRECT_URI,
+    callbackURL: process.env.DISCORD_REDIRECT_URI,
     scope: ['identify', 'email']
-  },
-  function(accessToken, refreshToken, profile, cb) {
-    console.log('Discord authentication successful');
-    console.log('Profile:', profile);
-    
-    // Add tokens to user profile
-    profile.accessToken = accessToken;
-    profile.refreshToken = refreshToken;
-    
-    return cb(null, profile);
+  }, async (accessToken, refreshToken, profile, done) => {
+    console.log('Discord auth callback received');
+    console.log('Profile:', JSON.stringify(profile, null, 2));
+    try {
+      // Add tokens to user profile
+      profile.accessToken = accessToken;
+      profile.refreshToken = refreshToken;
+      
+      return done(null, profile);
+    } catch (error) {
+      console.error('Auth error:', error);
+      return done(error, null);
+    }
   }
 ));
 
