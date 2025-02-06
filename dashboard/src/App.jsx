@@ -11,23 +11,28 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('Checking authentication status...');
     // Check if user is logged in
-    axios.get(`${import.meta.env.VITE_API_URL}/api/user`, { 
+    axios.get(`${import.meta.env.VITE_API_URL}/api/auth/status`, { 
       withCredentials: true 
     })
       .then(res => {
-        setUser(res.data);
+        console.log('Auth response:', res.data);
+        setUser(res.data.user);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Auth error:', error);
         setUser(null);
         setLoading(false);
       });
   }, []);
 
   if (loading) {
-    return null; // Or a loading spinner
+    return <div>Loading...</div>; // Show loading state
   }
+
+  console.log('Current user state:', user);
 
   return (
     <ChakraProvider theme={theme}>
@@ -40,7 +45,13 @@ function App() {
           />
           <Route 
             path="/dashboard" 
-            element={user ? <Dashboard /> : <Navigate to="/" />} 
+            element={
+              user ? (
+                <Dashboard user={user} />
+              ) : (
+                <Navigate to="/" state={{ from: '/dashboard' }} />
+              )
+            } 
           />
           <Route 
             path="/auth/discord/callback" 

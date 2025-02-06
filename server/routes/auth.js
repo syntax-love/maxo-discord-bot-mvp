@@ -7,9 +7,12 @@ router.get('/discord', passport.authenticate('discord'));
 
 router.get('/discord/callback', 
   passport.authenticate('discord', { 
-    failureRedirect: '/login',
-    successRedirect: '/dashboard'
-  })
+    failureRedirect: '/login'
+  }),
+  (req, res) => {
+    console.log('Auth successful, user:', req.user);
+    res.redirect('/dashboard');
+  }
 );
 
 router.get('/logout', (req, res) => {
@@ -24,6 +27,10 @@ router.get('/logout', (req, res) => {
 
 // Check auth status
 router.get('/status', (req, res) => {
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
+  console.log('Is Authenticated:', req.isAuthenticated());
+  
   if (req.isAuthenticated()) {
     res.json({ 
       isAuthenticated: true, 
@@ -31,7 +38,8 @@ router.get('/status', (req, res) => {
     });
   } else {
     res.json({ 
-      isAuthenticated: false 
+      isAuthenticated: false,
+      user: null
     });
   }
 });
