@@ -3,7 +3,7 @@ services:
     name: discord-bot-dashboard
     runtime: node
     buildCommand: |
-      cd dashboard && npm install --legacy-peer-deps && npm run build
+      cd dashboard && rm -rf node_modules package-lock.json && npm install && npm run build
       cd .. && npm install
     startCommand: node server/app.js
     envVars:
