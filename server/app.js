@@ -16,9 +16,7 @@ const DOMAIN = process.env.NODE_ENV === 'production'
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? `https://${DOMAIN}`
-    : 'http://localhost:5173',
+  origin: 'https://maxo-discord-bot-mvp.onrender.com',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -36,11 +34,10 @@ app.use(session({
     ttl: 24 * 60 * 60
   }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000,
-    domain: process.env.NODE_ENV === 'production' ? DOMAIN : undefined
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000
   },
   name: 'discord.sid'
 }));
