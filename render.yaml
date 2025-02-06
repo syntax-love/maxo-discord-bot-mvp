@@ -3,8 +3,14 @@ services:
     name: discord-bot-dashboard
     runtime: node
     buildCommand: |
-      cd dashboard && npm install && npm install vite @vitejs/plugin-react -D && npm run build
-      cd .. && npm install
+      cd dashboard && \
+      rm -rf node_modules package-lock.json && \
+      npm install && \
+      npm install -D vite@latest @vitejs/plugin-react@latest && \
+      node node_modules/vite/bin/vite.js build && \
+      cd .. && \
+      rm -rf node_modules package-lock.json && \
+      npm install
     startCommand: node server/app.js
     envVars:
       - key: NODE_ENV
