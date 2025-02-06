@@ -27,21 +27,15 @@ router.get('/logout', (req, res) => {
 
 // Check auth status
 router.get('/status', (req, res) => {
+  console.log('Checking auth status');
   console.log('Session:', req.session);
   console.log('User:', req.user);
   console.log('Is Authenticated:', req.isAuthenticated());
   
-  if (req.isAuthenticated()) {
-    res.json({ 
-      isAuthenticated: true, 
-      user: req.user 
-    });
-  } else {
-    res.json({ 
-      isAuthenticated: false,
-      user: null
-    });
-  }
+  res.json({
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user || null
+  });
 });
 
 module.exports = router; 

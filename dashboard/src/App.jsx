@@ -6,33 +6,48 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import theme from './theme';
 
+// Configure axios defaults
+axios.defaults.withCredentials = true;
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     console.log('Checking authentication status...');
-    // Check if user is logged in
-    axios.get(`${import.meta.env.VITE_API_URL}/api/auth/status`, { 
-      withCredentials: true 
-    })
-      .then(res => {
-        console.log('Auth response:', res.data);
-        setUser(res.data.user);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Auth error:', error);
+    
+    // Check auth status
+    const checkAuth = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/status`, {
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Auth response:', response.data);
+        
+        if (response.data.isAuthenticated) {
+          setUser(response.data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
         setUser(null);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    checkAuth();
   }, []);
 
   if (loading) {
-    return <div>Loading...</div>; // Show loading state
+    return <div>Loading...</div>;
   }
-
-  console.log('Current user state:', user);
 
   return (
     <ChakraProvider theme={theme}>
