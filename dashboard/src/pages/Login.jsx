@@ -31,26 +31,14 @@ export default function Login() {
   }, [searchParams, toast]);
 
   const handleLogin = () => {
-    // Force production URL regardless of environment
-    const redirectUri = 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback';
-    const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
-    
-    console.log('Login attempt with:', {
-      clientId,
-      redirectUri
-    });
-    
     const authUrl = new URL('https://discord.com/api/oauth2/authorize');
-    authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'identify email');
-    authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.append('client_id', '1335678688712196146');
+    authUrl.searchParams.append('redirect_uri', 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback');
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('scope', 'identify email');
+    authUrl.searchParams.append('prompt', 'consent');
     
-    const finalUrl = authUrl.toString();
-    console.log('Redirecting to:', finalUrl);
-    
-    window.location.href = finalUrl;
+    window.location.href = authUrl.toString();
   };
 
   return (
