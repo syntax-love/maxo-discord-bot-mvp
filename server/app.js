@@ -9,11 +9,16 @@ require('dotenv').config();
 
 const app = express();
 
+// Get the domain from environment
+const DOMAIN = process.env.NODE_ENV === 'production' 
+  ? 'maxo-discord-bot-mvp.onrender.com'  // Replace with your actual Render domain
+  : 'localhost';
+
 // CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CLIENT_URL 
-    : ['http://localhost:5173', 'http://localhost:3001'],
+  origin: process.env.NODE_ENV === 'production'
+    ? `https://${DOMAIN}`
+    : 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -28,16 +33,14 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    ttl: 24 * 60 * 60,
-    autoRemove: 'native',
-    touchAfter: 24 * 3600 // time period in seconds
+    ttl: 24 * 60 * 60
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
+    maxAge: 24 * 60 * 60 * 1000,
+    domain: process.env.NODE_ENV === 'production' ? DOMAIN : undefined
   },
   name: 'discord.sid'
 }));
@@ -46,29 +49,22 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Session debugging middleware
+// Logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  console.log('Session:', {
-    id: req.sessionID,
-    user: req.session?.user,
-    cookie: req.session?.cookie
-  });
+  console.log('Headers:', req.headers);
+  console.log('Session:', req.session);
   next();
 });
 
-// Import routes
-const authRoutes = require('./routes/auth');
-const apiRoutes = require('./routes/api');
-
 // Routes
-app.use('/auth', authRoutes);
-app.use('/api', apiRoutes);
+app.use('/auth', require('./routes/auth'));
+app.use('/api', require('./routes/api'));
 
-// Serve static files from the React app
+// Serve static files
 app.use(express.static(path.join(__dirname, '../dashboard/dist')));
 
-// Handle React routing, return all requests to React app
+// Handle React routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
 });
@@ -105,9 +101,9 @@ mongoose.connection.on('connected', () => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
-  console.log('MongoDB URI exists:', !!process.env.MONGODB_URI);
+  console.log('Domain:', DOMAIN);
 });
 
 module.exports = app;

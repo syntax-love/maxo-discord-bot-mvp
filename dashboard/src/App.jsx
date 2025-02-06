@@ -1,13 +1,9 @@
 import { ChakraProvider, ColorModeScript, Spinner, Center, Text, VStack } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import theme from './theme';
-
-// Configure axios defaults
-axios.defaults.withCredentials = true;
 
 function App() {
   const [user, setUser] = useState(null);
@@ -17,8 +13,14 @@ function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('Checking auth status...');
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/status`, {
+        // Use window.location.origin as the API URL in production
+        const apiUrl = window.location.origin;
+        const statusUrl = `${apiUrl}/auth/status`;
+        
+        console.log('Checking auth at URL:', statusUrl);
+        console.log('Current origin:', window.location.origin);
+        
+        const response = await fetch(statusUrl, {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
@@ -26,6 +28,8 @@ function App() {
           }
         });
 
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -40,8 +44,7 @@ function App() {
         }
       } catch (err) {
         console.error('Auth check error:', err);
-        setError(err.message);
-        setUser(null);
+        setError(`Failed to check auth: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -67,7 +70,10 @@ function App() {
     return (
       <ChakraProvider theme={theme}>
         <Center height="100vh">
-          <Text color="red.500">Error: {error}</Text>
+          <VStack spacing={4}>
+            <Text color="red.500">Error: {error}</Text>
+            <Text fontSize="sm">Please try refreshing the page</Text>
+          </VStack>
         </Center>
       </ChakraProvider>
     );
