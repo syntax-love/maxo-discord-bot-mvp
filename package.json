@@ -22,6 +22,7 @@
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
     "qrcode": "^1.5.4",
+    "react-icons": "^5.4.0",
     "redis": "^4.7.0",
     "winston": "^3.17.0"
   },
