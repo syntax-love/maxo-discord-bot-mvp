@@ -4,15 +4,17 @@ services:
     runtime: node
     buildCommand: |
       cd dashboard && rm -rf node_modules package-lock.json && npm install && npm run build
-      cd .. && npm install
+      cd .. && rm -rf node_modules package-lock.json && npm install
     startCommand: node server/app.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 3000
+      - key: SESSION_SECRET
+        generateValue: true
       - key: DISCORD_CLIENT_ID
         sync: false
       - key: DISCORD_CLIENT_SECRET
         sync: false
-      - key: DISCORD_REDIRECT_URI
-        value: https://your-app.onrender.com/auth/callback
-    staticPublishPath: dashboard/dist # Vite builds to 'dist' by default
+    staticPublishPath: dashboard/dist
