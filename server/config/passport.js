@@ -2,9 +2,7 @@ const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 require('dotenv').config();
 
-const REDIRECT_URI = process.env.NODE_ENV === 'production'
-  ? 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback'  // Replace with your actual Render URL
-  : 'http://localhost:3001/auth/discord/callback';
+const REDIRECT_URI = 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback';
 
 console.log('Discord OAuth Configuration:');
 console.log('Client ID:', process.env.DISCORD_CLIENT_ID);
