@@ -20,7 +20,7 @@ passport.deserializeUser((user, done) => {
 passport.use(new DiscordStrategy({
     clientID: process.env.DISCORD_CLIENT_ID,
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    callbackURL: process.env.DISCORD_REDIRECT_URI,
+    callbackURL: REDIRECT_URI,
     scope: ['identify', 'email']
   }, async (accessToken, refreshToken, profile, done) => {
     console.log('Discord auth callback received');

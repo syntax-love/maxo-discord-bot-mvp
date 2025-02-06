@@ -31,12 +31,18 @@ router.get('/discord/callback',
   (req, res, next) => {
     console.log('OAuth callback received');
     console.log('Query params:', req.query);
-    console.log('Headers:', req.headers);
+    console.log('Session:', req.session);
+    console.log('Environment variables:', {
+      DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+      REDIRECT_URI: REDIRECT_URI,
+      NODE_ENV: process.env.NODE_ENV
+    });
     next();
   },
   passport.authenticate('discord', {
     failureRedirect: '/?error=auth_failed',
-    successRedirect: '/dashboard'
+    successRedirect: '/dashboard',
+    failWithError: true
   })
 );
 
