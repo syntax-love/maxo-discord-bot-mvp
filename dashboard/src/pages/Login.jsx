@@ -24,11 +24,10 @@ export default function Login() {
 
   const handleLogin = () => {
     const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
-    const REDIRECT_URI = 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback';
     
     const authUrl = new URL('https://discord.com/api/oauth2/authorize');
     authUrl.searchParams.append('client_id', DISCORD_CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', encodeURIComponent(REDIRECT_URI));
+    authUrl.searchParams.append('redirect_uri', 'https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('scope', 'identify email');
     authUrl.searchParams.append('prompt', 'consent');
