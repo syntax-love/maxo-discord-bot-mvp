@@ -1,68 +1,89 @@
-import { Box, Container, Grid, Heading, Stat, StatLabel, StatNumber, useColorMode } from '@chakra-ui/react';
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { 
+  Box, 
+  Grid, 
+  Heading, 
+  Text, 
+  Card, 
+  CardHeader, 
+  CardBody,
+  Stack,
+  Badge,
+  useColorMode
+} from '@chakra-ui/react';
+
+const tiers = {
+  pearl: {
+    name: 'Pearl',
+    color: 'gray.400',
+    features: ['Access to Lounge', 'Basic Support']
+  },
+  sapphire: {
+    name: 'Sapphire',
+    color: 'blue.400',
+    features: ['Access to Private Suite', 'Priority Support', 'Custom Role']
+  },
+  diamond: {
+    name: 'Diamond',
+    color: 'purple.400',
+    features: ['Access to Penthouse', 'VIP Support', 'Custom Role', 'Exclusive Events']
+  }
+};
 
 export default function Dashboard() {
   const { colorMode } = useColorMode();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/stats`, {
-          withCredentials: true
-        });
-        setStats(response.data);
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
-
-  if (loading) {
-    return <Box>Loading...</Box>;
-  }
+  const bgColor = colorMode === 'dark' ? 'gray.700' : 'white';
 
   return (
-    <Container maxW="container.xl" py={8}>
+    <Box p={8}>
       <Heading mb={6}>Dashboard</Heading>
       
-      <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={6}>
-        <Stat
-          p={4}
-          bg={colorMode === 'dark' ? 'gray.700' : 'white'}
-          borderRadius="lg"
-          boxShadow="sm"
-        >
-          <StatLabel>Total Users</StatLabel>
-          <StatNumber>{stats?.totalUsers || 0}</StatNumber>
-        </Stat>
+      <Grid templateColumns="repeat(auto-fit, minmax(300px, 1fr))" gap={6}>
+        {/* Current Subscription */}
+        <Card bg={bgColor}>
+          <CardHeader>
+            <Heading size="md">Current Subscription</Heading>
+          </CardHeader>
+          <CardBody>
+            <Stack spacing={4}>
+              <Badge colorScheme="purple" p={2} borderRadius="md">
+                Diamond Tier
+              </Badge>
+              <Text>Status: Active</Text>
+              <Text>Next Payment: March 1, 2024</Text>
+            </Stack>
+          </CardBody>
+        </Card>
 
-        <Stat
-          p={4}
-          bg={colorMode === 'dark' ? 'gray.700' : 'white'}
-          borderRadius="lg"
-          boxShadow="sm"
-        >
-          <StatLabel>Active Subscriptions</StatLabel>
-          <StatNumber>{stats?.activeSubscriptions || 0}</StatNumber>
-        </Stat>
+        {/* Active Promo Codes */}
+        <Card bg={bgColor}>
+          <CardHeader>
+            <Heading size="md">Active Promo Codes</Heading>
+          </CardHeader>
+          <CardBody>
+            <Stack spacing={4}>
+              <Badge colorScheme="green" p={2} borderRadius="md">
+                LAUNCH2025 (20% OFF)
+              </Badge>
+              <Text>Valid until: Dec 31, 2025</Text>
+              <Text>Applicable to: Sapphire, Diamond</Text>
+            </Stack>
+          </CardBody>
+        </Card>
 
-        <Stat
-          p={4}
-          bg={colorMode === 'dark' ? 'gray.700' : 'white'}
-          borderRadius="lg"
-          boxShadow="sm"
-        >
-          <StatLabel>Revenue This Month</StatLabel>
-          <StatNumber>${stats?.revenueThisMonth || 0}</StatNumber>
-        </Stat>
+        {/* Server Access */}
+        <Card bg={bgColor}>
+          <CardHeader>
+            <Heading size="md">Server Access</Heading>
+          </CardHeader>
+          <CardBody>
+            <Stack spacing={4}>
+              <Text>✅ Lounge</Text>
+              <Text>✅ Private Suite</Text>
+              <Text>✅ Penthouse</Text>
+            </Stack>
+          </CardBody>
+        </Card>
       </Grid>
-    </Container>
+    </Box>
   );
 } 
