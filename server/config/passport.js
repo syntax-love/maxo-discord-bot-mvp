@@ -38,4 +38,4 @@ passport.use(new DiscordStrategy({
   }
 ));
 
-module.exports = passport; 
+module.exports = { passport, REDIRECT_URI }; 
