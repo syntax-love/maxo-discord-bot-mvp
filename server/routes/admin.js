@@ -84,17 +84,16 @@ router.get('/roles/:roleId/members', async (req, res) => {
 // Get promo codes
 router.get('/promo-codes', (req, res) => {
   try {
-    const promoCodes = [
-      {
-        code: 'LAUNCH2025',
-        discount: 20,
-        
-        expires: '2025-12-31',
-        validTiers: ['sapphire', 'diamond'],
-        oneTime: true
-      }
-    ];
-    res.json(promoCodes);
+    // Use the promo codes from the Discord bot
+    const formattedPromoCodes = Object.entries(promoCodes).map(([code, details]) => ({
+      code,
+      discount: details.discount * 100,
+      expires: details.expires.toISOString().split('T')[0],
+      validTiers: details.validTiers,
+      oneTime: details.oneTime,
+      usedCount: details.usedBy.size
+    }));
+    res.json(formattedPromoCodes);
   } catch (error) {
     console.error('Error fetching promo codes:', error);
     res.status(500).json({ error: 'Failed to fetch promo codes' });
@@ -104,8 +103,17 @@ router.get('/promo-codes', (req, res) => {
 // Create promo code
 router.post('/promo-codes', (req, res) => {
   try {
-    const newPromoCode = req.body;
-    res.status(201).json(newPromoCode);
+    const { code, discount, validTiers, expiryDate, oneTime } = req.body;
+    
+    promoCodes[code] = {
+      discount: discount / 100,
+      expires: new Date(expiryDate),
+      validTiers,
+      oneTime,
+      usedBy: new Set()
+    };
+
+    res.status(201).json({ message: 'Promo code created successfully' });
   } catch (error) {
     console.error('Error creating promo code:', error);
     res.status(500).json({ error: 'Failed to create promo code' });

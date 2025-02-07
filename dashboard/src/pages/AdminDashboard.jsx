@@ -46,48 +46,34 @@ import {
       oneTime: true
     });
   
+    const fetchData = async () => {
+      try {
+        const [rolesResponse, promoResponse] = await Promise.all([
+          fetch('/api/admin/roles'),
+          fetch('/api/admin/promo-codes')
+        ]);
+        
+        const rolesData = await rolesResponse.json();
+        const promoData = await promoResponse.json();
+        
+        setRoles(rolesData);
+        setPromoCodes(promoData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch dashboard data',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+  
     useEffect(() => {
-      const fetchRoles = async () => {
-        try {
-          const response = await fetch('/api/admin/roles');
-          const data = await response.json();
-          setRoles(data);
-        } catch (error) {
-          console.error('Error fetching roles:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to fetch role information',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      fetchRoles();
-    }, []);
-  
-    useEffect(() => {
-      const fetchPromoCodes = async () => {
-        try {
-          const response = await fetch('/api/admin/promo-codes');
-          const data = await response.json();
-          setPromoCodes(data);
-        } catch (error) {
-          console.error('Error fetching promo codes:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to fetch promo codes',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-        }
-      };
-  
-      fetchPromoCodes();
+      fetchData();
     }, []);
   
     const handleCreatePromo = async (e) => {
@@ -103,15 +89,8 @@ import {
   
         if (!response.ok) throw new Error('Failed to create promo code');
   
-        toast({
-          title: 'Success',
-          description: 'Promo code created successfully',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
+        await fetchData(); // Refresh all data
         onClose();
-        // Reset form
         setFormData({
           code: '',
           discount: '',
@@ -119,10 +98,18 @@ import {
           expiryDate: '',
           oneTime: true
         });
+  
+        toast({
+          title: 'Success',
+          description: 'Promo code created successfully',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
       } catch (error) {
         toast({
           title: 'Error',
-          description: error.message,
+          description: 'Failed to create promo code',
           status: 'error',
           duration: 5000,
           isClosable: true,
