@@ -24,11 +24,32 @@ app.use((req, res, next) => {
   next();
 });
 
-// Your routes here
+// API Routes
+app.get('/api/user', (req, res) => {
+  res.json(req.user);
+});
+
+app.get('/api/stats', (req, res) => {
+  res.json({
+    totalUsers: 100,
+    activeSubscriptions: 50,
+    revenueThisMonth: 1000
+  });
+});
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dashboard/dist')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back the index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Environment:', process.env.NODE_ENV);
 });
 
 module.exports = app;

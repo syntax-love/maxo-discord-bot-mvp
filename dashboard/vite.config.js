@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: resolve(__dirname, 'dist'),
+    outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
     sourcemap: true,
@@ -23,8 +23,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'https://maxo-discord-bot-mvp.onrender.com',
-      '/auth': 'https://maxo-discord-bot-mvp.onrender.com'
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      }
     },
   },
 });
