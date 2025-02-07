@@ -43,34 +43,13 @@ const mockRoles = [
   }
 ];
 
-// Get role information and member count
-router.get('/roles', async (req, res) => {
+// Get roles information
+router.get('/roles', (req, res) => {
   try {
-    if (!useRealData) {
-      return res.json(mockRoles);
-    }
-
-    const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    if (!guild) {
-      return res.status(404).json({ error: 'Guild not found' });
-    }
-
-    const roleStats = await Promise.all(
-      Object.entries(tierRoleMapping).map(async ([tier, roleId]) => {
-        const role = guild.roles.cache.get(roleId);
-        return {
-          tier,
-          roleId,
-          memberCount: role ? role.members.size : 0,
-          exists: !!role
-        };
-      })
-    );
-
-    res.json(roleStats);
+    res.json(mockRoles);
   } catch (error) {
     console.error('Error fetching roles:', error);
-    res.status(500).json({ error: 'Failed to fetch role information' });
+    res.status(500).json({ error: 'Failed to fetch roles' });
   }
 });
 
@@ -109,6 +88,7 @@ router.get('/promo-codes', (req, res) => {
       {
         code: 'LAUNCH2025',
         discount: 20,
+        
         expires: '2025-12-31',
         validTiers: ['sapphire', 'diamond'],
         oneTime: true

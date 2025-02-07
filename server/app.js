@@ -7,12 +7,7 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 
 app.use(express.json());
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://maxo-discord-bot-mvp.onrender.com',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors());
 
 // Mock authentication middleware
 app.use((req, res, next) => {
