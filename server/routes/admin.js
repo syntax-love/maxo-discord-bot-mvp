@@ -4,6 +4,19 @@ const { Client, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
+// Login the Discord client
+client.login(process.env.DISCORD_BOT_TOKEN);
+
+client.once('ready', () => {
+  console.log('Admin routes: Discord client is ready');
+});
+
+// Use mock data until client is ready
+let useRealData = false;
+client.on('ready', () => {
+  useRealData = true;
+});
+
 // Import role mappings from your existing config
 const tierRoleMapping = {
   pearl: '1335686254993477663',
@@ -33,6 +46,10 @@ const mockRoles = [
 // Get role information and member count
 router.get('/roles', async (req, res) => {
   try {
+    if (!useRealData) {
+      return res.json(mockRoles);
+    }
+
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     if (!guild) {
       return res.status(404).json({ error: 'Guild not found' });
@@ -52,7 +69,7 @@ router.get('/roles', async (req, res) => {
 
     res.json(roleStats);
   } catch (error) {
-    console.error('Error fetching role information:', error);
+    console.error('Error fetching roles:', error);
     res.status(500).json({ error: 'Failed to fetch role information' });
   }
 });
@@ -82,16 +99,6 @@ router.get('/roles/:roleId/members', async (req, res) => {
   } catch (error) {
     console.error('Error fetching role members:', error);
     res.status(500).json({ error: 'Failed to fetch role members' });
-  }
-});
-
-// Get roles information
-router.get('/roles', (req, res) => {
-  try {
-    res.json(mockRoles);
-  } catch (error) {
-    console.error('Error fetching roles:', error);
-    res.status(500).json({ error: 'Failed to fetch roles' });
   }
 });
 
