@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -36,6 +37,9 @@ app.get('/api/stats', (req, res) => {
     revenueThisMonth: 1000
   });
 });
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dashboard/dist')));

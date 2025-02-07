@@ -26,15 +26,41 @@ import {
     Select,
     useToast
   } from '@chakra-ui/react';
+  import { useEffect, useState } from 'react';
   
   const AdminDashboard = () => {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
+    const [roles, setRoles] = useState([]);
+    const [loading, setLoading] = useState(true);
   
     const handleCreatePromo = async (e) => {
       e.preventDefault();
       // Implementation coming in next step
     };
+  
+    useEffect(() => {
+      const fetchRoles = async () => {
+        try {
+          const response = await fetch('/api/admin/roles');
+          const data = await response.json();
+          setRoles(data);
+        } catch (error) {
+          console.error('Error fetching roles:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to fetch role information',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchRoles();
+    }, []);
   
     return (
       <Box p={8}>
@@ -69,6 +95,43 @@ import {
                     <Td>20</Td>
                     <Td>$799.40</Td>
                   </Tr>
+                </Tbody>
+              </Table>
+            </CardBody>
+          </Card>
+  
+          {/* Role Management */}
+          <Card>
+            <CardHeader>
+              <Heading size="md">Role Management</Heading>
+            </CardHeader>
+            <CardBody>
+              <Table variant="simple">
+                <Thead>
+                  <Tr>
+                    <Th>Tier</Th>
+                    <Th>Role ID</Th>
+                    <Th>Members</Th>
+                    <Th>Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {roles.map(({ tier, roleId, memberCount }) => (
+                    <Tr key={roleId}>
+                      <Td>{tier.charAt(0).toUpperCase() + tier.slice(1)}</Td>
+                      <Td>{roleId}</Td>
+                      <Td>{memberCount}</Td>
+                      <Td>
+                        <Button 
+                          size="sm" 
+                          colorScheme="blue"
+                          onClick={() => handleViewMembers(roleId)}
+                        >
+                          View Members
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
                 </Tbody>
               </Table>
             </CardBody>
