@@ -30,16 +30,6 @@ const mockRoles = [
   }
 ];
 
-const mockPromoCodes = [
-  {
-    code: 'LAUNCH2025',
-    discount: 20,
-    expires: '2025-12-31',
-    validTiers: ['sapphire', 'diamond'],
-    oneTime: true
-  }
-];
-
 // Get role information and member count
 router.get('/roles', async (req, res) => {
   try {
@@ -108,7 +98,16 @@ router.get('/roles', (req, res) => {
 // Get promo codes
 router.get('/promo-codes', (req, res) => {
   try {
-    res.json(mockPromoCodes);
+    const promoCodes = [
+      {
+        code: 'LAUNCH2025',
+        discount: 20,
+        expires: '2025-12-31',
+        validTiers: ['sapphire', 'diamond'],
+        oneTime: true
+      }
+    ];
+    res.json(promoCodes);
   } catch (error) {
     console.error('Error fetching promo codes:', error);
     res.status(500).json({ error: 'Failed to fetch promo codes' });
@@ -119,7 +118,6 @@ router.get('/promo-codes', (req, res) => {
 router.post('/promo-codes', (req, res) => {
   try {
     const newPromoCode = req.body;
-    mockPromoCodes.push(newPromoCode);
     res.status(201).json(newPromoCode);
   } catch (error) {
     console.error('Error creating promo code:', error);

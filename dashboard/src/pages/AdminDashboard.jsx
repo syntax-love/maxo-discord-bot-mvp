@@ -36,6 +36,7 @@ import {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
     const [roles, setRoles] = useState([]);
+    const [promoCodes, setPromoCodes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
       code: '',
@@ -66,6 +67,27 @@ import {
       };
   
       fetchRoles();
+    }, []);
+  
+    useEffect(() => {
+      const fetchPromoCodes = async () => {
+        try {
+          const response = await fetch('/api/admin/promo-codes');
+          const data = await response.json();
+          setPromoCodes(data);
+        } catch (error) {
+          console.error('Error fetching promo codes:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to fetch promo codes',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+        }
+      };
+  
+      fetchPromoCodes();
     }, []);
   
     const handleCreatePromo = async (e) => {
@@ -215,14 +237,16 @@ import {
                     </Tr>
                   </Thead>
                   <Tbody>
-                    <Tr>
-                      <Td>LAUNCH2025</Td>
-                      <Td>20%</Td>
-                      <Td>Dec 31, 2025</Td>
-                      <Td>
-                        <Button size="sm" colorScheme="red">Delete</Button>
-                      </Td>
-                    </Tr>
+                    {promoCodes.map((promo) => (
+                      <Tr key={promo.code}>
+                        <Td>{promo.code}</Td>
+                        <Td>{promo.discount}%</Td>
+                        <Td>{new Date(promo.expires).toLocaleDateString()}</Td>
+                        <Td>
+                          <Button size="sm" colorScheme="red">Delete</Button>
+                        </Td>
+                      </Tr>
+                    ))}
                   </Tbody>
                 </Table>
               </CardBody>
