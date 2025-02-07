@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const passport = require('./config/passport');
+const { passport } = require('./config/passport');
 const cors = require('cors');
 const path = require('path');
 const MongoStore = require('connect-mongo');

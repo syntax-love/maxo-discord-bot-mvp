@@ -38,4 +38,5 @@ passport.use(new DiscordStrategy({
   }
 ));
 
+// Export both the configured passport instance and the REDIRECT_URI
 module.exports = { passport, REDIRECT_URI }; 
