@@ -24,7 +24,7 @@ const tierRoleMapping = {
   diamond: '1335835830836789341'
 };
 
-// Temporary mock data for development
+// Initialize mock data
 const mockRoles = [
   {
     tier: 'pearl',
@@ -42,6 +42,17 @@ const mockRoles = [
     memberCount: 20
   }
 ];
+
+// Initialize promo codes
+let promoCodes = {
+  'LAUNCH2025': {
+    discount: 0.20,
+    expires: new Date('2025-12-31'),
+    validTiers: ['sapphire', 'diamond'],
+    oneTime: true,
+    usedBy: new Set()
+  }
+};
 
 // Get roles information
 router.get('/roles', (req, res) => {
@@ -84,14 +95,12 @@ router.get('/roles/:roleId/members', async (req, res) => {
 // Get promo codes
 router.get('/promo-codes', (req, res) => {
   try {
-    // Use the promo codes from the Discord bot
     const formattedPromoCodes = Object.entries(promoCodes).map(([code, details]) => ({
       code,
       discount: details.discount * 100,
       expires: details.expires.toISOString().split('T')[0],
       validTiers: details.validTiers,
-      oneTime: details.oneTime,
-      usedCount: details.usedBy.size
+      oneTime: details.oneTime
     }));
     res.json(formattedPromoCodes);
   } catch (error) {

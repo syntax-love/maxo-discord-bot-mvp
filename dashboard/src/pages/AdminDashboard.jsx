@@ -47,17 +47,22 @@ import {
     });
   
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [rolesResponse, promoResponse] = await Promise.all([
           fetch('/api/admin/roles'),
           fetch('/api/admin/promo-codes')
         ]);
         
+        if (!rolesResponse.ok || !promoResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
         const rolesData = await rolesResponse.json();
         const promoData = await promoResponse.json();
         
-        setRoles(rolesData);
-        setPromoCodes(promoData);
+        setRoles(Array.isArray(rolesData) ? rolesData : []);
+        setPromoCodes(Array.isArray(promoData) ? promoData : []);
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -67,6 +72,9 @@ import {
           duration: 5000,
           isClosable: true,
         });
+        // Initialize with empty arrays on error
+        setRoles([]);
+        setPromoCodes([]);
       } finally {
         setLoading(false);
       }
