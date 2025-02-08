@@ -110,11 +110,7 @@ async function registerCommands(guild) {
         description: 'Select the cryptocurrency for payment',
         type: ApplicationCommandOptionType.String,
         required: true,
-        choices: [
-          { name: 'BTC', value: 'btc' },
-          { name: 'ETH', value: 'eth' },
-          { name: 'SOL', value: 'sol' }
-        ]
+        autocomplete: true // Enable autocomplete for dynamic choices
       },
       {
         name: 'promo',
@@ -351,6 +347,15 @@ client.on('interactionCreate', async (interaction) => {
       // Create unique order ID
       const orderId = `ORDER_${Date.now()}_${interaction.user.id}`;
       
+      // Add this validation before creating payment:
+      if (tierSelection === 'sapphire' && cryptoSelection === 'btc') {
+        await interaction.editReply({
+          content: 'Bitcoin payments are only available for Diamond tier due to network minimums. Please select ETH or SOL for Sapphire tier.',
+          ephemeral: true
+        });
+        return;
+      }
+
       // Create payment
       const paymentData = {
         price_amount: finalPrice,
@@ -397,8 +402,23 @@ client.on('interactionCreate', async (interaction) => {
       // Build the payment embed.
       const embed = new EmbedBuilder()
         .setTitle('Complete Your Subscription Payment')
-        .setColor(0x00AE86)
-        .setDescription(`You are subscribing to the **${tierSelection.toUpperCase()}** tier.\nSend exactly **${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase()}** to the wallet address below.`)
+        .setColor(0x00AE86);
+
+      // Special handling for BTC with Sapphire tier
+      if (cryptoSelection === 'btc' && tierSelection === 'sapphire') {
+        embed.setDescription(`⚠️ Bitcoin transactions for the weekly Sapphire tier ($9.97) are currently unavailable due to minimum transaction requirements. Please choose ETH or SOL for weekly subscriptions, or select Diamond tier for BTC payments.
+
+Available options:
+• Use ETH/SOL for Sapphire tier ($9.97/week)
+• Use BTC for Diamond tier ($39.97/lifetime)`)
+          .setFooter({ text: 'Use /premium command again with a different selection' });
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+
+      // Normal payment flow continues for other combinations
+      embed.setDescription(`You are subscribing to the **${tierSelection.toUpperCase()}** tier.\nSend exactly **${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase()}** to the wallet address below.`)
         .addFields(
           { name: 'Wallet Address', value: paymentResponse.pay_address, inline: false },
           { 
@@ -568,7 +588,7 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
         }
       )
       .setFooter({ 
-        text: 'Use /premium to subscribe • Crypto payments accepted: BTC, ETH, SOL' 
+        text: 'Use /premium to subscribe • Sapphire: ETH/SOL only • Diamond: All cryptos accepted' 
       });
 
     await interaction.editReply({ embeds: [embed] });
@@ -685,6 +705,32 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
     } catch (error) {
       console.error('Error assigning Pearl role:', error);
       await interaction.editReply('Failed to assign Pearl role. Please try again later.');
+    }
+  }
+
+  // Add autocomplete handler
+  if (interaction.isAutocomplete()) {
+    if (commandName === 'premium') {
+      const focusedOption = interaction.options.getFocused(true);
+      if (focusedOption.name === 'crypto') {
+        const selectedTier = interaction.options.getString('tier');
+        let choices;
+        
+        if (selectedTier === 'sapphire') {
+          choices = [
+            { name: 'ETH', value: 'eth' },
+            { name: 'SOL', value: 'sol' }
+          ];
+        } else {
+          choices = [
+            { name: 'BTC', value: 'btc' },
+            { name: 'ETH', value: 'eth' },
+            { name: 'SOL', value: 'sol' }
+          ];
+        }
+        
+        await interaction.respond(choices);
+      }
     }
   }
 });
