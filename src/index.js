@@ -339,57 +339,30 @@ client.on('interactionCreate', async (interaction) => {
       // Retrieve selected options from the command.
       const tierSelection = interaction.options.getString('tier');
       const cryptoSelection = interaction.options.getString('crypto');
-      const promoCode = interaction.options.getString('promo')?.toUpperCase();
+      const promoCodeInput = interaction.options.getString('promo');  // This might be null/undefined
 
-      // Map tier selections to prices.
+      // Map tier selections to prices
       const tierPrices = {
         pearl: '0.00',
         sapphire: '9.97',
         diamond: '39.97'
       };
-      const priceAmount = tierPrices[tierSelection];
 
-      // Add subscription types
-      const tierTypes = {
-        pearl: 'free',
-        sapphire: 'weekly',
-        diamond: 'lifetime'
-      };
-
-      // Validate and apply promo code if provided
+      // Initialize price before promo code check
       let finalPrice = tierPrices[tierSelection];
       let promoApplied = false;
       let promoDetails = null;
 
-      if (promoCode) {
-        const promo = promoCodes[promoCode];
-        if (promo) {
-          // Check if promo is valid
-          const now = new Date();
-          if (now > promo.expires) {
-            await interaction.editReply('This promotional code has expired.');
-            return;
-          }
-
-          // Check if promo is valid for selected tier
-          if (!promo.validTiers.includes(tierSelection)) {
-            await interaction.editReply('This promotional code is not valid for the selected tier.');
-            return;
-          }
-
-          // Check if user has already used this one-time code
-          if (promo.oneTime && promo.usedBy.has(interaction.user.id)) {
-            await interaction.editReply('You have already used this promotional code.');
-            return;
-          }
-
-          // Apply discount
-          finalPrice = (parseFloat(finalPrice) * (1 - promo.discount)).toFixed(2);
+      // Only check promo if one was provided
+      if (promoCodeInput) {
+        const promoCode = promoCodeInput.toUpperCase();
+        promoDetails = promoCodes[promoCode];
+        
+        if (promoDetails && 
+            promoDetails.validTiers.includes(tierSelection) && 
+            new Date() < promoDetails.expires) {
+          finalPrice = (parseFloat(finalPrice) * (1 - promoDetails.discount)).toFixed(2);
           promoApplied = true;
-          promoDetails = promo;
-        } else {
-          await interaction.editReply('Invalid promotional code.');
-          return;
         }
       }
 
