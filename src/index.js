@@ -377,7 +377,9 @@ client.on('interactionCreate', async (interaction) => {
       // Build a payment URI for QR code generation.
       let paymentURI = '';
       if (cryptoSelection === 'btc') {
-        paymentURI = `bitcoin:${paymentResponse.pay_address}?amount=${paymentResponse.pay_amount}`;
+        // Fix BTC URI format - remove any spaces and ensure proper encoding
+        const cleanAmount = paymentResponse.pay_amount.toString().trim();
+        paymentURI = `bitcoin:${paymentResponse.pay_address}?amount=${cleanAmount}`;
       } else if (cryptoSelection === 'eth') {
         paymentURI = `ethereum:${paymentResponse.pay_address}?value=${paymentResponse.pay_amount}`;
       } else if (cryptoSelection === 'sol') {
