@@ -707,30 +707,32 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
       await interaction.editReply('Failed to assign Pearl role. Please try again later.');
     }
   }
+});
 
-  // Add autocomplete handler
-  if (interaction.isAutocomplete()) {
-    if (commandName === 'premium') {
-      const focusedOption = interaction.options.getFocused(true);
-      if (focusedOption.name === 'crypto') {
-        const selectedTier = interaction.options.getString('tier');
-        let choices;
-        
-        if (selectedTier === 'sapphire') {
-          choices = [
-            { name: 'ETH', value: 'eth' },
-            { name: 'SOL', value: 'sol' }
-          ];
-        } else {
-          choices = [
-            { name: 'BTC', value: 'btc' },
-            { name: 'ETH', value: 'eth' },
-            { name: 'SOL', value: 'sol' }
-          ];
-        }
-        
-        await interaction.respond(choices);
+// Add autocomplete handler for crypto selection
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isAutocomplete()) return;
+  
+  if (interaction.commandName === 'premium') {
+    const focusedOption = interaction.options.getFocused(true);
+    if (focusedOption.name === 'crypto') {
+      const selectedTier = interaction.options.getString('tier');
+      let choices;
+      
+      if (selectedTier === 'sapphire') {
+        choices = [
+          { name: 'ETH', value: 'eth' },
+          { name: 'SOL', value: 'sol' }
+        ];
+      } else {
+        choices = [
+          { name: 'BTC', value: 'btc' },
+          { name: 'ETH', value: 'eth' },
+          { name: 'SOL', value: 'sol' }
+        ];
       }
+      
+      await interaction.respond(choices);
     }
   }
 });
