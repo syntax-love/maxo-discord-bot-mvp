@@ -330,17 +330,15 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
-  // Handle the new /premium command.
+  // Handle the premium command
   if (commandName === 'premium') {
     const nowPayments = new NowPaymentsService(process.env.NOWPAYMENTS_API_KEY);
-    // Note: This reply is just to confirm the DM has been (or will be) sent.
     await interaction.deferReply({ ephemeral: true });
+    
     try {
-      // Retrieve selected options from the command.
       const tierSelection = interaction.options.getString('tier');
       const cryptoSelection = interaction.options.getString('crypto');
-      const promoCodeInput = interaction.options.getString('promo');  // This might be null/undefined
-
+      
       // Map tier selections to prices
       const tierPrices = {
         pearl: '0.00',
@@ -348,45 +346,33 @@ client.on('interactionCreate', async (interaction) => {
         diamond: '39.97'
       };
 
-      // Initialize price before promo code check
       let finalPrice = tierPrices[tierSelection];
-      let promoApplied = false;
-      let promoDetails = null;
-
-      // Only check promo if one was provided
-      if (promoCodeInput) {
-        const promoCode = promoCodeInput.toUpperCase();
-        promoDetails = promoCodes[promoCode];
-        
-        if (promoDetails && 
-            promoDetails.validTiers.includes(tierSelection) && 
-            new Date() < promoDetails.expires) {
-          finalPrice = (parseFloat(finalPrice) * (1 - promoDetails.discount)).toFixed(2);
-          promoApplied = true;
-        }
-      }
-
-      // Generate a unique order ID.
-      const orderId = `order_${interaction.user.id}_${Date.now()}`;
       
-      // Define the payment data with dynamic price_amount.
+      // Create unique order ID
+      const orderId = `ORDER_${Date.now()}_${interaction.user.id}`;
+      
+      // Create payment
       const paymentData = {
-        order_id: orderId,
         price_amount: finalPrice,
         price_currency: 'usd',
         pay_currency: cryptoSelection,
-        order_description: `${tierSelection.toUpperCase()} Subscription${promoApplied ? ' with promo ' + promoCode : ''}`
-        // Optional: ipn_callback_url: 'http://your-callback-url.com/ipn'
+        order_id: orderId,
+        order_description: `${tierSelection} tier subscription`,
+        ipn_callback_url: process.env.WEBHOOK_URL
       };
 
-      // Create a payment using NowPayments.
       const paymentResponse = await nowPayments.createPayment(paymentData);
-
-      // (Optional) fetch the latest payment status.
-      let statusResponse;
-      if (paymentResponse && paymentResponse.payment_id) {
-        statusResponse = await nowPayments.getPaymentStatus(paymentResponse.payment_id);
+      
+      if (!paymentResponse) {
+        throw new Error('Failed to create payment');
       }
+
+      // Store order details for later
+      orderMapping.set(orderId, {
+        userId: interaction.user.id,
+        tier: tierSelection,
+        timestamp: Date.now()
+      });
 
       // Build a payment URI for QR code generation.
       let paymentURI = '';
@@ -426,18 +412,6 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
         .setImage('attachment://qr.png')
         .setTimestamp();
 
-      if (promoApplied) {
-        embed.addFields({
-          name: 'Promo Applied',
-          value: `${promoCode} (${promoDetails.discount * 100}% off)`
-        });
-      }
-
-      // If payment created successfully, mark promo as used if applicable
-      if (promoApplied && promoDetails.oneTime) {
-        promoDetails.usedBy.add(interaction.user.id);
-      }
-
       // Send the payment embed with QR code as a DM.
       try {
         await interaction.user.send({ embeds: [embed], files: [qrAttachment] });
@@ -446,15 +420,6 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
         console.error('DM Error:', dmError);
         await interaction.editReply('I was unable to DM you. Please check your DM settings and try again.');
       }
-      
-
-      // Save the mapping (this can be persisted in a database in production).
-      orderMapping[paymentResponse.order_id] = {
-
-        userId: interaction.user.id,
-        tier: tierSelection,
-        promoApplied: promoApplied ? promoCode : null
-      };
     } catch (error) {
       console.error('Error executing /premium command:', error);
       await interaction.editReply(`Failed to create premium payment. Error: ${error.message}`);
@@ -468,7 +433,7 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
       const statusResponse = await nowPayments.getPaymentStatus(paymentId);
       
       // Get order details from our mapping
-      const orderDetails = orderMapping[orderId];
+      const orderDetails = orderMapping.get(orderId);
       if (!orderDetails) {
         console.error(`Order ${orderId} not found in mapping`);
         return false;
