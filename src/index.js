@@ -9,7 +9,8 @@ const {
   GatewayIntentBits, 
   ApplicationCommandOptionType,
   EmbedBuilder,
-  AttachmentBuilder
+  AttachmentBuilder,
+  Collection
 } = require('discord.js');
 const dotenv = require('dotenv');
 dotenv.config(); // Load environment variables from .env
@@ -69,6 +70,15 @@ const channels = {
   penthouse: 'PENTHOUSE_CHANNEL_ID'
 };
 
+// Add payment tracking
+const activePayments = new Collection();
+
+// Add cooldown handling
+const cooldowns = new Collection();
+
+// Add order mapping
+const orderMapping = new Map();
+
 /**
  * Registers the slash commands in the targeted guild.
  * Updated to include the /premium command with two options: tier and crypto.
@@ -91,7 +101,6 @@ async function registerCommands(guild) {
         type: ApplicationCommandOptionType.String,
         required: true,
         choices: [
-          { name: 'Pearl (FREE)', value: 'pearl' },
           { name: 'Sapphire ($9.97/week)', value: 'sapphire' },
           { name: 'Diamond ($39.97/lifetime)', value: 'diamond' }
         ]
@@ -103,13 +112,13 @@ async function registerCommands(guild) {
         required: true,
         choices: [
           { name: 'BTC', value: 'btc' },
-          { name: 'LTC', value: 'ltc' },
+          { name: 'ETH', value: 'eth' },
           { name: 'SOL', value: 'sol' }
         ]
       },
       {
         name: 'promo',
-        description: 'Enter a promotional code (optional)',
+        description: 'Enter promo code (optional)',
         type: ApplicationCommandOptionType.String,
         required: false
       }
@@ -150,17 +159,50 @@ async function registerCommands(guild) {
     options: []
   };
 
+  // Add a separate command for admins to assign Pearl tier
+  const assignPearlCommand = {
+    name: 'assignpearl',
+    description: 'Assign Pearl tier to a user (Admin only)',
+    options: [
+      {
+        name: 'user',
+        description: 'User to assign Pearl tier to',
+        type: ApplicationCommandOptionType.User,
+        required: true
+      }
+    ]
+  };
+
   try {
     await guild.commands.create(currenciesCommand);
     await guild.commands.create(premiumCommand);
     await guild.commands.create(checkPaymentCommand);
     await guild.commands.create(searchCommand);
-    await guild.commands.create(subscriptionCommand);
+    await guild.commands.create(subscriptionCommand); 
     await guild.commands.create(promoListCommand);
+    await guild.commands.create(assignPearlCommand);
     console.log(`Registered slash commands in guild: ${guild.name}`);
   } catch (error) {
     console.error('Error registering slash commands:', error);
   }
+}
+
+// Add this helper function
+async function checkRoleHierarchy(guild) {
+  const botMember = await guild.members.fetch(client.user.id);
+  const botRole = botMember.roles.highest;
+  
+  const premiumRoles = Object.values(tierRoleMapping).map(id => guild.roles.cache.get(id));
+  
+  const issues = premiumRoles
+    .filter(role => role && botRole.position <= role.position)
+    .map(role => role.name);
+    
+  if (issues.length > 0) {
+    console.error(`Bot cannot manage these roles: ${issues.join(', ')}`);
+    return false;
+  }
+  return true;
 }
 
 // When the client is ready, register commands in the designated guild.
@@ -220,11 +262,56 @@ client.once('ready', async () => {
       console.error('Error in subscription check interval:', error);
     }
   }, 60 * 60 * 1000); // Check every hour
+
+  const hierarchyCheck = await checkRoleHierarchy(guild);
+  if (!hierarchyCheck) {
+    console.error('Bot role hierarchy issues detected!');
+  }
+
+  // Add subscription cleanup interval
+  setInterval(async () => {
+    try {
+      const guild = client.guilds.cache.get(GUILD_ID);
+      if (!guild) return;
+      
+      const sapphireRole = guild.roles.cache.get(tierRoleMapping.sapphire);
+      const members = sapphireRole.members;
+      
+      for (const [memberId, member] of members) {
+        const expiry = await getSubscriptionExpiry(memberId);
+        if (expiry && new Date() > expiry) {
+          await member.roles.remove(sapphireRole);
+          try {
+            await member.send({
+              content: 'Your Sapphire subscription has expired. Use `/premium` to renew!'
+            });
+          } catch (dmError) {
+            console.error(`Could not DM user ${memberId} about expiration`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in subscription cleanup:', error);
+    }
+  }, 1000 * 60 * 60); // Check every hour
 });
 
 // Listen for interaction events from Discord (slash commands).
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
+
+  // Add cooldown check
+  if (cooldowns.has(interaction.user.id)) {
+    const cooldownEnd = cooldowns.get(interaction.user.id);
+    if (Date.now() < cooldownEnd) {
+      await interaction.reply({
+        content: 'Please wait a few seconds between commands.',
+        ephemeral: true
+      });
+      return;
+    }
+  }
+  cooldowns.set(interaction.user.id, Date.now() + 3000); // 3s cooldown
 
   const { commandName } = interaction;
 
@@ -334,8 +421,6 @@ client.on('interactionCreate', async (interaction) => {
         paymentURI = `bitcoin:${paymentResponse.pay_address}?amount=${paymentResponse.pay_amount}`;
       } else if (cryptoSelection === 'eth') {
         paymentURI = `ethereum:${paymentResponse.pay_address}?value=${paymentResponse.pay_amount}`;
-      } else if (cryptoSelection === 'ltc') {
-        paymentURI = `litecoin:${paymentResponse.pay_address}?amount=${paymentResponse.pay_amount}`;
       } else if (cryptoSelection === 'sol') {
         paymentURI = `${paymentResponse.pay_address}?amount=${paymentResponse.pay_amount}`;
       } else {
@@ -390,10 +475,9 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
       }
       
 
-      // Import our order mapping.
-      const orderMapping = require('./orderMapping');
       // Save the mapping (this can be persisted in a database in production).
       orderMapping[paymentResponse.order_id] = {
+
         userId: interaction.user.id,
         tier: tierSelection,
         promoApplied: promoApplied ? promoCode : null
@@ -544,7 +628,7 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
         }
       )
       .setFooter({ 
-        text: 'Use /premium to subscribe • Crypto payments accepted: BTC, LTC, SOL' 
+        text: 'Use /premium to subscribe • Crypto payments accepted: BTC, ETH, SOL' 
       });
 
     await interaction.editReply({ embeds: [embed] });
@@ -637,6 +721,31 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
     }
 
     await interaction.editReply({ embeds: [embed] });
+  }
+
+  // Add handler for assignpearl command
+  if (commandName === 'assignpearl') {
+    await interaction.deferReply({ ephemeral: true });
+    
+    // Check if user has admin permissions
+    if (!interaction.member.permissions.has('Administrator')) {
+      await interaction.editReply('You do not have permission to use this command.');
+      return;
+    }
+
+    try {
+      const targetUser = interaction.options.getUser('user');
+      const member = await interaction.guild.members.fetch(targetUser.id);
+      
+      await member.roles.add(tierRoleMapping.pearl);
+      await interaction.editReply(`Successfully assigned Pearl tier to ${targetUser.username}`);
+      
+      // Update channel permissions
+      await updateChannelAccess(member);
+    } catch (error) {
+      console.error('Error assigning Pearl role:', error);
+      await interaction.editReply('Failed to assign Pearl role. Please try again later.');
+    }
   }
 });
 

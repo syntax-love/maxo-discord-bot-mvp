@@ -246,6 +246,45 @@ import {
                 </Table>
               </CardBody>
             </Card>
+  
+            {/* Payment Overview */}
+            <Card>
+              <CardHeader>
+                <Heading size="md">Payment Overview</Heading>
+              </CardHeader>
+              <CardBody>
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Tier</Th>
+                      <Th>Price</Th>
+                      <Th>Active Subscriptions</Th>
+                      <Th>Monthly Revenue</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    <Tr>
+                      <Td>Pearl</Td>
+                      <Td>Free</Td>
+                      <Td>{roles.find(r => r.tier === 'pearl')?.memberCount || 0}</Td>
+                      <Td>$0</Td>
+                    </Tr>
+                    <Tr>
+                      <Td>Sapphire</Td>
+                      <Td>$9.99</Td>
+                      <Td>{roles.find(r => r.tier === 'sapphire')?.memberCount || 0}</Td>
+                      <Td>${((roles.find(r => r.tier === 'sapphire')?.memberCount || 0) * 9.99).toFixed(2)}</Td>
+                    </Tr>
+                    <Tr>
+                      <Td>Diamond</Td>
+                      <Td>$39.99</Td>
+                      <Td>{roles.find(r => r.tier === 'diamond')?.memberCount || 0}</Td>
+                      <Td>${((roles.find(r => r.tier === 'diamond')?.memberCount || 0) * 39.99).toFixed(2)}</Td>
+                    </Tr>
+                  </Tbody>
+                </Table>
+              </CardBody>
+            </Card>
           </Grid>
   
           {/* Create Promo Modal */}

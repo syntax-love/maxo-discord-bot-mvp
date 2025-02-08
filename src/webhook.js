@@ -7,12 +7,13 @@
  */
 const express = require('express');
 const bodyParser = require('body-parser');
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const dotenv = require('dotenv');
+const crypto = require('crypto');
 dotenv.config();
 
 // Import our in-memory order mapping.
-const orderMapping = require('./orderMapping');
+const orderMapping = new Map();
 
 const app = express();
 app.use(bodyParser.json());
@@ -30,42 +31,87 @@ const tierRoleMapping = {
   diamond: '1335835830836789341'      // Replace with your actual Role ID for Diamond.
 };
 
-app.post('/nowpayments/ipn', async (req, res) => {
-  console.log('Received IPN:', req.body);
-  
-  // Extract the payment data from the webhook (adjust the field names as needed).
-  const { order_id, payment_status } = req.body;
-  
-  // Only process notifications if the payment status is "confirmed".
-  if (order_id && payment_status === 'confirmed') {
-    const mapping = orderMapping[order_id];
-    if (mapping) {
+// Add payment verification middleware
+const verifyPaymentSignature = (req, res, next) => {
+  const signature = req.headers['x-nowpayments-sig'];
+  const payload = JSON.stringify(req.body);
+  const hmac = crypto
+    .createHmac('sha512', process.env.NOWPAYMENTS_IPN_SECRET)
+    .update(payload)
+    .digest('hex');
+    
+  if (signature !== hmac) {
+    return res.status(401).send('Invalid signature');
+  }
+  next();
+};
+
+app.post('/nowpayments/ipn', verifyPaymentSignature, async (req, res) => {
+  try {
+    console.log('Received IPN:', req.body);
+    
+    const { order_id, payment_status, pay_amount, pay_currency } = req.body;
+    
+    if (!order_id || !payment_status) {
+      console.error('Invalid webhook payload');
+      return res.status(400).send('Invalid payload');
+    }
+
+    const mapping = orderMapping.get(order_id);
+    if (!mapping) {
+      console.log(`No mapping found for order ID: ${order_id}`);
+      return res.status(200).send('OK');
+    }
+
+    if (payment_status === 'confirmed') {
+      const guild = client.guilds.cache.get(GUILD_ID);
+      if (!guild) {
+        console.error('Guild not found!');
+        return res.status(500).send('Guild not found');
+      }
+
       try {
-        const guild = client.guilds.cache.get(GUILD_ID);
-        if (!guild) {
-          console.error('Guild not found!');
-          return res.status(500).send('Guild not found');
-        }
-        // Fetch the member from Discord.
         const member = await guild.members.fetch(mapping.userId);
         const roleId = tierRoleMapping[mapping.tier];
-        if (roleId) {
-          await member.roles.add(roleId);
-          console.log(`Assigned ${mapping.tier} role to user ${mapping.userId}`);
-          // Optionally, send a DM notifying the user that their premium role has been activated.
-        } else {
+        
+        if (!roleId) {
           console.error(`No role mapping found for tier: ${mapping.tier}`);
+          return res.status(500).send('Invalid tier');
         }
+
+        await member.roles.add(roleId);
+        console.log(`Assigned ${mapping.tier} role to user ${mapping.userId}`);
+
+        // Send confirmation DM
+        try {
+          const embed = new EmbedBuilder()
+            .setTitle('Premium Subscription Activated!')
+            .setColor(0x00FF00)
+            .setDescription(`Your ${mapping.tier} subscription has been activated!`)
+            .addFields(
+              { name: 'Amount Paid', value: `${pay_amount} ${pay_currency}` },
+              { name: 'Order ID', value: order_id }
+            )
+            .setTimestamp();
+
+          await member.send({ embeds: [embed] });
+        } catch (dmError) {
+          console.error('Could not send confirmation DM:', dmError);
+        }
+
+        // Clean up the mapping
+        orderMapping.delete(order_id);
       } catch (error) {
-        console.error('Error during role assignment:', error);
+        console.error('Error processing payment confirmation:', error);
+        return res.status(500).send('Error processing payment');
       }
-    } else {
-      console.log(`No mapping found for order ID: ${order_id}`);
     }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    res.status(500).send('Internal server error');
   }
-  
-  // Always respond with a 200 to acknowledge receipt.
-  res.status(200).send('OK');
 });
 
 // Start the webhook server.

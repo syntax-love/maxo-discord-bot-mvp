@@ -1,38 +1,20 @@
 services:
   - type: web
-    name: discord-bot-dashboard
+    name: discord-bot
     runtime: node
-    buildCommand: |
-      cd dashboard && \
-      npm install && \
-      npm install -D vite@latest @vitejs/plugin-react@latest && \
-      npm pkg set type="commonjs" && \
-      VITE_DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID} ./node_modules/.bin/vite build && \
-      cd .. && \
-      npm install
-    startCommand: |
-      node src/index.js & \
-      node server/app.js
+    buildCommand: npm install
+    startCommand: node src/index.js
     env: node
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
-      - key: SESSION_SECRET
-        generateValue: true
-      - key: DISCORD_CLIENT_ID
-        sync: false
-      - key: DISCORD_CLIENT_SECRET
-        sync: false
       - key: DISCORD_BOT_TOKEN
         sync: false
       - key: GUILD_ID
         sync: false
-      - key: DISCORD_REDIRECT_URI
-        value: https://maxo-discord-bot-mvp.onrender.com/auth/discord/callback
-      - key: MONGODB_URI
-        sync: false
       - key: NOWPAYMENTS_API_KEY
         sync: false
-    staticPublishPath: dashboard/dist
+      - key: NOWPAYMENTS_IPN_SECRET
+        sync: false
