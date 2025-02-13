@@ -10,7 +10,8 @@ const {
   ApplicationCommandOptionType,
   EmbedBuilder,
   AttachmentBuilder,
-  Collection
+  Collection,
+  PermissionFlagsBits
 } = require('discord.js');
 const dotenv = require('dotenv');
 dotenv.config(); // Load environment variables from .env
@@ -45,23 +46,76 @@ if (!process.env.NOWPAYMENTS_API_KEY) {
 // Create a new Discord client with required intents.
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Promo code mapping (in production, this should be in a database)
-const promoCodes = {
-  'LAUNCH2025': {
-    discount: 0.20,  // 20% off
-    expires: new Date('2025-12-31'),
-    validTiers: ['sapphire', 'diamond'],
-    oneTime: true,
-    usedBy: new Set()  // Track who's used this code
+// Replace the existing promoCodes with a more robust structure
+const promoCodes = new Map();
+
+// Add helper functions for promo code management
+const promoCodeManager = {
+  addCode(code, details) {
+    if (typeof code !== 'string' || code.length < 3) {
+      throw new Error('Invalid promo code format');
+    }
+    
+    const normalizedCode = code.toUpperCase();
+    if (promoCodes.has(normalizedCode)) {
+      throw new Error('Promo code already exists');
+    }
+
+    promoCodes.set(normalizedCode, {
+      discount: Math.min(Math.max(details.discount, 0), 1), // Ensure between 0 and 1
+      expires: new Date(details.expires),
+      validTiers: Array.isArray(details.validTiers) ? details.validTiers : ['diamond'],
+      oneTime: Boolean(details.oneTime),
+      usedBy: new Set(),
+      createdAt: new Date(),
+      createdBy: details.createdBy || 'SYSTEM'
+    });
   },
-  'SPECIAL50': {
-    discount: 0.50,  // 50% off
-    expires: new Date('2025-03-01'),
-    validTiers: ['diamond'],
-    oneTime: true,
-    usedBy: new Set()
+
+  isValid(code, tier, userId) {
+    const promoCode = promoCodes.get(code?.toUpperCase());
+    if (!promoCode) return false;
+
+    return (
+      promoCode.expires > new Date() &&
+      promoCode.validTiers.includes(tier) &&
+      (!promoCode.oneTime || !promoCode.usedBy.has(userId))
+    );
+  },
+
+  useCode(code, userId) {
+    const promoCode = promoCodes.get(code?.toUpperCase());
+    if (promoCode && promoCode.oneTime) {
+      promoCode.usedBy.add(userId);
+    }
+  },
+
+  getActivePromoCodes() {
+    const now = new Date();
+    return Array.from(promoCodes.entries())
+      .filter(([_, details]) => details.expires > now)
+      .map(([code, details]) => ({
+        code,
+        ...details,
+        usedCount: details.usedBy.size
+      }));
   }
 };
+
+// Initialize default promo codes
+promoCodeManager.addCode('LAUNCH2025', {
+  discount: 0.20,
+  expires: new Date('2025-12-31'),
+  validTiers: ['sapphire', 'diamond'],
+  oneTime: true
+});
+
+promoCodeManager.addCode('SPECIAL50', {
+  discount: 0.50,
+  expires: new Date('2025-03-01'),
+  validTiers: ['diamond'],
+  oneTime: true
+});
 
 // Channel IDs (replace with actual channel IDs)
 const channels = {
@@ -655,30 +709,31 @@ Amount: ${paymentResponse.pay_amount} ${paymentResponse.pay_currency.toUpperCase
   if (commandName === 'promolist') {
     await interaction.deferReply({ ephemeral: true });
 
-    // Check if user has admin role
-    if (!interaction.member.permissions.has('Administrator')) {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       await interaction.editReply('You do not have permission to use this command.');
       return;
     }
 
+    const activePromoCodes = promoCodeManager.getActivePromoCodes();
+    
     const embed = new EmbedBuilder()
       .setTitle('Active Promotional Codes')
       .setColor(0x00AE86)
-      .setDescription('Current promotional codes and their details:')
+      .setDescription(activePromoCodes.length ? 'Current promotional codes and their details:' : 'No active promotional codes')
       .setTimestamp();
 
-    for (const [code, details] of Object.entries(promoCodes)) {
-      const isExpired = new Date() > details.expires;
+    activePromoCodes.forEach(({ code, discount, validTiers, expires, oneTime, usedCount }) => {
       embed.addFields({
         name: code,
-        value: `Discount: ${details.discount * 100}%
-                Valid Tiers: ${details.validTiers.join(', ')}
-                Expires: ${details.expires.toLocaleDateString()}
-                One-Time Use: ${details.oneTime ? 'Yes' : 'No'}
-                Status: ${isExpired ? '❌ Expired' : '✅ Active'}
-                Times Used: ${details.usedBy.size}`
+        value: [
+          `Discount: ${discount * 100}%`,
+          `Valid Tiers: ${validTiers.join(', ')}`,
+          `Expires: ${expires.toLocaleDateString()}`,
+          `One-Time Use: ${oneTime ? 'Yes' : 'No'}`,
+          `Times Used: ${usedCount}`
+        ].join('\n')
       });
-    }
+    });
 
     await interaction.editReply({ embeds: [embed] });
   }

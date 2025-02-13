@@ -1,55 +1,27 @@
-import { Box, Flex, Button, Spacer, useColorMode } from '@chakra-ui/react';
-import { Link as RouterLink, Outlet } from 'react-router-dom';
-import { FaSun, FaMoon, FaUser, FaShieldAlt } from 'react-icons/fa';
+import { Box } from '@chakra-ui/react';
+import { Outlet, Navigate } from 'react-router-dom';
+import { useAuth } from '../providers/AuthProvider';
+import Navbar from './Navbar/index';
 
-const Layout = ({ isAdmin }) => {
-  const { colorMode, toggleColorMode } = useColorMode();
+export default function Layout() {
+  const { user, loading } = useAuth();
+
+  // Show nothing while checking auth status
+  if (loading) {
+    return null;
+  }
+
+  // If not logged in and not on login page, redirect to login
+  if (!user && window.location.pathname !== '/login') {
+    return <Navigate to="/login" />;
+  }
 
   return (
     <Box minH="100vh">
-      <Flex 
-        as="nav" 
-        align="center" 
-        justify="space-between" 
-        padding="1rem" 
-        bg={colorMode === 'dark' ? 'gray.800' : 'white'} 
-        borderBottom="1px" 
-        borderColor={colorMode === 'dark' ? 'gray.700' : 'gray.200'}
-      >
-        <Flex align="center" gap={4}>
-          <Button
-            as={RouterLink}
-            to="/dashboard"
-            variant="ghost"
-            leftIcon={<FaUser />}
-          >
-            Dashboard
-          </Button>
-          
-          {isAdmin && (
-            <Button
-              as={RouterLink}
-              to="/admin"
-              variant="ghost"
-              leftIcon={<FaShieldAlt />}
-            >
-              Admin
-            </Button>
-          )}
-        </Flex>
-
-        <Spacer />
-
-        <Button onClick={toggleColorMode} variant="ghost">
-          {colorMode === 'light' ? <FaMoon /> : <FaSun />}
-        </Button>
-      </Flex>
-
+      {user && <Navbar />}
       <Box as="main" p={4}>
         <Outlet />
       </Box>
     </Box>
   );
-};
-
-export default Layout;
+}

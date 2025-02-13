@@ -4,29 +4,32 @@ import { theme } from './theme';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import TransactionsSearch from './pages/TransactionsSearch';
 import Layout from './components/Layout';
+import AuthCallback from './pages/AuthCallback';
+import { DiscordDataProvider } from './providers/DiscordDataProvider';
+import { AuthProvider } from './providers/AuthProvider';
 
 function App() {
-  // For now, we'll hardcode isAdmin. Later we'll get this from your auth system
-  const isAdmin = true;
-
   return (
     <ChakraProvider theme={theme}>
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <Router>
-        <Routes>
-          <Route path="/" element={<Layout isAdmin={isAdmin} />}>
-            <Route index element={<Navigate to="/dashboard" />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route 
-              path="admin" 
-              element={
-                isAdmin ? <AdminDashboard /> : <Navigate to="/dashboard" />
-              } 
-            />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Route>
-        </Routes>
+        <AuthProvider>
+          <DiscordDataProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Navigate to="/dashboard" />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="admin" element={<AdminDashboard />} />
+                <Route path="transactions" element={<TransactionsSearch />} />
+                <Route path="*" element={<Navigate to="/dashboard" />} />
+              </Route>
+            </Routes>
+          </DiscordDataProvider>
+        </AuthProvider>
       </Router>
     </ChakraProvider>
   );

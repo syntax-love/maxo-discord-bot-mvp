@@ -1,20 +1,69 @@
 services:
+  # Discord Bot Service
   - type: web
     name: discord-bot
-    runtime: node
-    buildCommand: npm install
-    startCommand: node src/index.js
     env: node
+    buildCommand: npm install
+    startCommand: node src/webhook.js
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: ADMIN_GUILD_ID
+        sync: false
+
+  # Dashboard Backend Service
+  - type: web
+    name: dashboard-backend
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+    envVars:
       - key: PORT
         value: 3000
       - key: DISCORD_BOT_TOKEN
         sync: false
-      - key: GUILD_ID
+      - key: DISCORD_CLIENT_ID
         sync: false
-      - key: NOWPAYMENTS_API_KEY
+      - key: DISCORD_CLIENT_SECRET
         sync: false
-      - key: NOWPAYMENTS_IPN_SECRET
+      - key: ADMIN_GUILD_ID
         sync: false
+      - key: FRONTEND_URL
+        value: https://your-dashboard-frontend.onrender.com
+
+  # Dashboard Frontend Service
+  - type: web
+    name: dashboard-frontend
+    env: node
+    buildCommand: cd dashboard && npm install && npm run build
+    startCommand: cd dashboard && npm run preview
+    envVars:
+      - key: VITE_API_URL
+        value: https://your-dashboard-backend.onrender.com
+
+  # Combined Service
+  - type: web
+    name: discord-dashboard
+    env: node
+    buildCommand: |
+      npm install
+      cd dashboard && npm install && npm run build
+      cd ../server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: ADMIN_GUILD_ID
+        sync: false
+      - key: FRONTEND_URL
+        value: https://your-app-name.onrender.com

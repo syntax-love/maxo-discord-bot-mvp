@@ -2,14 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { Client, GatewayIntentBits } = require('discord.js');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
-
-// Login the Discord client
-client.login(process.env.DISCORD_BOT_TOKEN);
-
-client.once('ready', () => {
-  console.log('Admin routes: Discord client is ready');
+const client = new Client({ 
+  intents: [
+    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.GuildMembers
+  ] 
 });
+
+// Wait for client to be ready before exporting
+let clientReady = new Promise((resolve) => {
+  client.once('ready', () => {
+    console.log('Admin routes: Discord client is ready');
+    resolve();
+  });
+});
+
+client.login(process.env.DISCORD_BOT_TOKEN);
 
 // Use mock data until client is ready
 let useRealData = false;
@@ -129,4 +137,5 @@ router.post('/promo-codes', (req, res) => {
   }
 });
 
-module.exports = router;
+// Export both the router and the ready promise
+module.exports = { router, client, clientReady };
