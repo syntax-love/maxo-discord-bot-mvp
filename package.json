@@ -4,8 +4,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "start": "node src/index.js & cd server && node app.js",
+    "dev": "nodemon src/index.js",
+    "build": "cd dashboard && npm install && npm run build && cd ../server && npm install"
   },
   "author": "syntax.love <dev@syntax.love>",
   "license": "ISC",

@@ -53,7 +53,9 @@ services:
       npm install
       cd dashboard && npm install && npm run build
       cd ../server && npm install
-    startCommand: cd server && node index.js
+    startCommand: |
+      node src/index.js & 
+      cd server && node app.js
     envVars:
       - key: PORT
         value: 3000
@@ -67,3 +69,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://your-app-name.onrender.com
+      - key: NODE_ENV
+        value: production
